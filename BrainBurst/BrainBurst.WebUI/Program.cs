@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using BrainBurst.Infrastructure.Persistence; // Підключаємо твій DbContext
+using BrainBurst.Infrastructure.Persistence;
+using Serilog;
 
 namespace BrainBurst.WebUI
 {
@@ -7,69 +8,96 @@ namespace BrainBurst.WebUI
     {
         public static void Main(string[] args)
         {
-            var builder = WebApplication.CreateBuilder(args);
+            // === 1. НАЛАШТУВАННЯ SERILOG ===
+            var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile($"appsettings.{Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production"}.json", optional: true)
+                .Build();
 
-            // Add services to the container.
-            builder.Services.AddControllersWithViews();
+            Log.Logger = new LoggerConfiguration()
+                .ReadFrom.Configuration(config)
+                .CreateLogger();
 
-            // === 1. РЕЄСТРАЦІЯ БАЗИ ДАНИХ (БЕЗ ЦЬОГО НЕ ПРАЦЮВАТИМЕ) ===
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-            
-            // Якщо використовуєш PostgreSQL:
-            builder.Services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(connectionString));
-                
-            // (Якщо MS SQL, зміни UseNpgsql на UseSqlServer)
-            // ============================================================
-
-            var app = builder.Build();
-
-            // === 2. ПРЯМА ПЕРЕВІРКА ПІДКЛЮЧЕННЯ ПРИ ЗАПУСКУ ===
-            using (var scope = app.Services.CreateScope())
+            try
             {
-                var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                Log.Information("🚀 Запуск додатку BrainBurst...");
+
+                var builder = WebApplication.CreateBuilder(args);
+
+                // === 2. ДОДАЄМО SERILOG ДО ВЕБА ===
+                builder.Host.UseSerilog();
+
+                // Add services to the container.
+                builder.Services.AddControllersWithViews();
+
+                // === 3. РЕЄСТРАЦІЯ БАЗИ ДАНИХ ===
+                var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
                 
-                try
+                // Якщо використовуєш PostgreSQL:
+                builder.Services.AddDbContext<ApplicationDbContext>(options =>
+                    options.UseNpgsql(connectionString));
+
+                var app = builder.Build();
+
+                // === 4. ПРЯМА ПЕРЕВІРКА ПІДКЛЮЧЕННЯ ПРИ ЗАПУСКУ ===
+                using (var scope = app.Services.CreateScope())
                 {
-                    Console.WriteLine("\n⏳ Перевіряю підключення до бази даних...");
+                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
                     
-                    if (dbContext.Database.CanConnect())
+                    try
                     {
-                        Console.WriteLine("✅ СУПЕР! Зв'язок з базою даних ВСТАНОВЛЕНО!\n");
+                        Log.Information("⏳ Перевіряю підключення до бази даних...");
+                        
+                        if (dbContext.Database.CanConnect())
+                        {
+                            Log.Information("✅ Зв'язок з базою даних встановлено!");
+                        }
+                        else
+                        {
+                            Log.Warning("⚠️ Сервер знайдено, але до бази підключитися не вдалося");
+                        }
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Console.WriteLine("❌ Сервер знайдено, але до бази підключитися не вдалося (можливо, ти її ще не створив вручну).\n");
+                        Log.Error(ex, "❌ Помилка при перевірці підключення до БД");
                     }
                 }
-                catch (Exception ex)
+
+                // === 5. ДОДАЄМО HTTP LOGGING MIDDLEWARE ===
+                // app.UseMiddleware<HttpRequestLoggingMiddleware>();
+
+                // Configure the HTTP request pipeline.
+                if (!app.Environment.IsDevelopment())
                 {
-                    Console.WriteLine($"\n❌ ПОМИЛКА: Немає зв'язку з сервером. Перевір пароль або чи запущений сам сервер БД.");
-                    Console.WriteLine($"Деталі: {ex.Message}\n");
+                    app.UseExceptionHandler("/Home/Error");
+                    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+                    app.UseHsts();
                 }
-            }
-            // ===================================================
 
-            // Configure the HTTP request pipeline.
-            if (!app.Environment.IsDevelopment())
+                app.UseHttpsRedirection();
+                app.UseRouting();
+
+                app.UseAuthorization();
+
+                app.MapStaticAssets();
+                app.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}")
+                    .WithStaticAssets();
+
+                Log.Information("✨ Додаток успішно запущено!");
+                app.Run();
+            }
+            catch (Exception ex)
             {
-                app.UseExceptionHandler("/Home/Error");
-                // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
-                app.UseHsts();
+                Log.Fatal(ex, "💥 Критична помилка при запуску додатку");
             }
-
-            app.UseHttpsRedirection();
-            app.UseRouting();
-
-            app.UseAuthorization();
-
-            app.MapStaticAssets();
-            app.MapControllerRoute(
-                name: "default",
-                pattern: "{controller=Home}/{action=Index}/{id?}")
-                .WithStaticAssets();
-
-            app.Run();
+            finally
+            {
+                Log.Information("🛑 Вимикаємо додаток...");
+                Log.CloseAndFlush();
+            }
         }
     }
 }

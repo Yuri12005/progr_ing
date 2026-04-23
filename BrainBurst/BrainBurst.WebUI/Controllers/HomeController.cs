@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using BrainBurst.WebUI.Models;
+using Serilog.Context;
 
 namespace BrainBurst.WebUI.Controllers;
 
@@ -10,22 +11,92 @@ public class HomeController : Controller
 
     public HomeController(ILogger<HomeController> logger)
     {
-        _logger = logger;
-    }
+     _logger = logger;
+ }
 
     public IActionResult Index()
     {
-        return View();
+        var stopwatch = Stopwatch.StartNew();
+   var operationId = Guid.NewGuid().ToString();
+      
+        using (LogContext.PushProperty("OperationId", operationId))
+        using (LogContext.PushProperty("OperationName", "Index"))
+using (LogContext.PushProperty("UserId", HttpContext.User.Identity?.Name ?? "Anonymous"))
+        {
+       try
+            {
+            _logger.LogInformation("?? START: ?????????? ?????????? ?? ??????? ????????");
+     _logger.LogDebug("?? Debug: ???????? ???????? Index");
+       
+   // ????????? ????-?????? ??????
+   Thread.Sleep(50);
+      
+      stopwatch.Stop();
+var elapsedMs = stopwatch.ElapsedMilliseconds;
+       
+      if (elapsedMs > 1000)
+     {
+        _logger.LogWarning("?? SLOW: ????? ???????? Index ?????? {ElapsedMs}ms", elapsedMs);
+ }
+           else
+      {
+         _logger.LogInformation("? SUCCESS: ???????? ????????? ?? {ElapsedMs}ms", elapsedMs);
+      }
+      
+     return View();
+            }
+catch (Exception ex)
+            {
+                stopwatch.Stop();
+       _logger.LogError(ex, "? ERROR: ???????? ??????? ?? ???????? Index. ???: {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+     throw;
+        }
+            finally
+     {
+     _logger.LogInformation("?? FINISH: ??????????? ???????? Index");
+        }
+        }
     }
 
     public IActionResult Privacy()
-    {
-        return View();
+  {
+        var stopwatch = Stopwatch.StartNew();
+   var operationId = Guid.NewGuid().ToString();
+      
+        using (LogContext.PushProperty("OperationId", operationId))
+  using (LogContext.PushProperty("OperationName", "Privacy"))
+     {
+      try
+      {
+         _logger.LogInformation("?? START: ?????????? ?????????? ?? ???????? ???????????");
+     
+                Thread.Sleep(30);
+ 
+                stopwatch.Stop();
+    _logger.LogInformation("? SUCCESS: Privacy ???????? ??????????? ?? {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+  
+          return View();
+     }
+         catch (Exception ex)
+       {
+    stopwatch.Stop();
+          _logger.LogError(ex, "? ERROR: ??????? ?? Privacy ????????. ???: {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+          throw;
+  }
+            finally
+       {
+       _logger.LogInformation("?? FINISH: ??????????? ???????? Privacy");
+            }
+     }
     }
 
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {
-        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+      var requestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
+     
+        _logger.LogError("?? ERROR: ???????? ??????? ??????????. RequestId: {RequestId}", requestId);
+
+        return View(new ErrorViewModel { RequestId = requestId });
     }
 }
