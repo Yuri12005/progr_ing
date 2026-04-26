@@ -25,10 +25,10 @@ using (LogContext.PushProperty("UserId", HttpContext.User.Identity?.Name ?? "Ano
         {
        try
             {
-            _logger.LogInformation("?? START: ?????????? ?????????? ?? ??????? ????????");
-     _logger.LogDebug("?? Debug: ???????? ???????? Index");
+            _logger.LogInformation("START: User navigating to home page");
+     _logger.LogDebug("Debug: Index operation started");
        
-   // ????????? ????-?????? ??????
+   // Simulate some work
    Thread.Sleep(50);
       
       stopwatch.Stop();
@@ -36,11 +36,11 @@ var elapsedMs = stopwatch.ElapsedMilliseconds;
        
       if (elapsedMs > 1000)
      {
-        _logger.LogWarning("?? SLOW: ????? ???????? Index ?????? {ElapsedMs}ms", elapsedMs);
+        _logger.LogWarning("SLOW: Index operation took {ElapsedMs}ms", elapsedMs);
  }
            else
       {
-         _logger.LogInformation("? SUCCESS: ???????? ????????? ?? {ElapsedMs}ms", elapsedMs);
+         _logger.LogInformation("SUCCESS: Operation completed in {ElapsedMs}ms", elapsedMs);
       }
       
      return View();
@@ -48,12 +48,12 @@ var elapsedMs = stopwatch.ElapsedMilliseconds;
 catch (Exception ex)
             {
                 stopwatch.Stop();
-       _logger.LogError(ex, "? ERROR: ???????? ??????? ?? ???????? Index. ???: {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+       _logger.LogError(ex, "ERROR: Critical error on Index page. Time: {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
      throw;
         }
             finally
      {
-     _logger.LogInformation("?? FINISH: ??????????? ???????? Index");
+     _logger.LogInformation("FINISH: Index operation completed");
         }
         }
     }
@@ -68,24 +68,24 @@ catch (Exception ex)
      {
       try
       {
-         _logger.LogInformation("?? START: ?????????? ?????????? ?? ???????? ???????????");
+         _logger.LogInformation("START: User navigating to privacy page");
      
                 Thread.Sleep(30);
  
                 stopwatch.Stop();
-    _logger.LogInformation("? SUCCESS: Privacy ???????? ??????????? ?? {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+    _logger.LogInformation("SUCCESS: Privacy page loaded in {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
   
           return View();
      }
          catch (Exception ex)
        {
     stopwatch.Stop();
-          _logger.LogError(ex, "? ERROR: ??????? ?? Privacy ????????. ???: {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
+          _logger.LogError(ex, "ERROR: Error on Privacy page. Time: {ElapsedMs}ms", stopwatch.ElapsedMilliseconds);
           throw;
   }
             finally
        {
-       _logger.LogInformation("?? FINISH: ??????????? ???????? Privacy");
+       _logger.LogInformation("FINISH: Privacy operation completed");
             }
      }
     }
@@ -95,7 +95,7 @@ catch (Exception ex)
     {
       var requestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier;
      
-        _logger.LogError("?? ERROR: ???????? ??????? ??????????. RequestId: {RequestId}", requestId);
+        _logger.LogError("ERROR: Error page activated. RequestId: {RequestId}", requestId);
 
         return View(new ErrorViewModel { RequestId = requestId });
     }

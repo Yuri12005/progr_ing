@@ -21,7 +21,7 @@ namespace BrainBurst.WebUI
 
             try
             {
-                Log.Information("🚀 Запуск додатку BrainBurst...");
+                Log.Information("Application BrainBurst starting...");
 
                 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,20 +47,20 @@ namespace BrainBurst.WebUI
                     
                     try
                     {
-                        Log.Information("⏳ Перевіряю підключення до бази даних...");
+                        Log.Information("Checking database connection...");
                         
                         if (dbContext.Database.CanConnect())
                         {
-                            Log.Information("✅ Зв'язок з базою даних встановлено!");
+                            Log.Information("Database connection established successfully!");
                         }
                         else
                         {
-                            Log.Warning("⚠️ Сервер знайдено, але до бази підключитися не вдалося");
+                            Log.Warning("Server found, but unable to connect to database");
                         }
                     }
                     catch (Exception ex)
                     {
-                        Log.Error(ex, "❌ Помилка при перевірці підключення до БД");
+                        Log.Error(ex, "Error checking database connection");
                     }
                 }
 
@@ -86,16 +86,16 @@ namespace BrainBurst.WebUI
                     pattern: "{controller=Home}/{action=Index}/{id?}")
                     .WithStaticAssets();
 
-                Log.Information("✨ Додаток успішно запущено!");
+                Log.Information("Application started successfully!");
                 app.Run();
             }
             catch (Exception ex)
             {
-                Log.Fatal(ex, "💥 Критична помилка при запуску додатку");
+                Log.Fatal(ex, "Critical error starting application");
             }
             finally
             {
-                Log.Information("🛑 Вимикаємо додаток...");
+                Log.Information("Application shutting down...");
                 Log.CloseAndFlush();
             }
         }
