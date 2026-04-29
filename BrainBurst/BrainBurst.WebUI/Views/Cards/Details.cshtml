@@ -1,0 +1,239 @@
+﻿@model List<BrainBurst.WebUI.Controllers.FlashcardViewModel>
+@{
+    ViewData["Title"] = "Вивчення карток";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .study-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 50px;
+        min-height: 70vh;
+        perspective: 1000px; /* Потрібно для 3D ефекту */
+    }
+
+    /* Стиль стрілок */
+    .nav-arrow {
+        font-size: 60px;
+        color: #FF3B30;
+        cursor: pointer;
+        user-select: none;
+        transition: transform 0.2s;
+        background: none;
+        border: none;
+    }
+
+        .nav-arrow:hover {
+            transform: scale(1.2);
+        }
+
+        .nav-arrow:disabled {
+            color: #ccc;
+            cursor: default;
+        }
+
+    /* Контейнер карти */
+    .card-scene {
+        width: 600px;
+        height: 350px;
+        position: relative;
+    }
+
+    /* Стилі самого лічильника */
+    .card-counter {
+        position: absolute;
+        top: -35px; /* Піднімаємо над карткою */
+        right: 15px; /* Вирівнюємо по правому краю */
+        font-size: 20px;
+        font-weight: 800;
+        color: #FF3B30; /* Фірмовий червоний */
+    }
+
+    .card {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+        cursor: default;
+    }
+
+        /* Клас, який перевертає карту */
+        .card.is-flipped {
+            transform: rotateY(180deg);
+        }
+
+    .card-face {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden; /* Приховує зворотню сторону під час оберту */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 40px;
+        box-sizing: border-box;
+        border: 3px solid #FF3B30;
+        border-radius: 24px;
+        background-color: #F8D7D5;
+    }
+
+    /* Зворотня сторона */
+    .card-face-back {
+        transform: rotateY(180deg);
+        background-color: white;
+    }
+
+    .question-text {
+        font-size: 28px;
+        font-weight: 800;
+        margin-bottom: 30px;
+        text-align: center;
+        width: 100%;
+        overflow-wrap: break-word; /* Ось це відповідає за перенесення на новий рядок */
+    }
+
+    .answer-input {
+        width: 80%;
+        background-color: white;
+        border: 2px solid #D9D9D9;
+        border-radius: 12px;
+        padding: 15px;
+        font-size: 18px;
+        text-align: center;
+        outline: none;
+    }
+
+    .btn-confirm {
+        margin-top: 25px;
+        background-color: black;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 40px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+
+    /* Елементи зворотньої сторони */
+    .status-icon {
+        font-size: 70px;
+        margin-bottom: 10px;
+    }
+
+    .correct {
+        color: #28a745;
+    }
+
+    .incorrect {
+        color: #FF3B30;
+    }
+
+    .result-details {
+        text-align: center;
+        font-size: 18px;
+        line-height: 1.6;
+        width: 100%;
+        overflow-wrap: break-word; /* І тут також */
+    }
+</style>
+
+<div class="study-container">
+    <button class="nav-arrow" id="prevBtn" onclick="changeCard(-1)">❮</button>
+
+    <div class="card-scene">
+
+        <div class="card-counter" id="cardCounter"></div>
+
+        <div class="card" id="mainCard">
+
+            <div class="card-face card-face-front">
+                <div class="question-text" id="qFront">Питання завантажується...</div>
+                <input type="text" id="userInput" class="answer-input" placeholder="Ваша відповідь..." autocomplete="off">
+                <button class="btn-confirm" onclick="checkAnswer()">Підтвердити</button>
+            </div>
+
+            <div class="card-face card-face-back">
+                <div id="statusIcon" class="status-icon"></div>
+                <div class="question-text" id="qBack" style="font-size: 20px; margin-bottom: 10px;"></div>
+                <div class="result-details" id="resultText"></div>
+                <button class="btn-confirm" onclick="flipBack()">До питання</button>
+            </div>
+
+        </div>
+    </div>
+
+    <button class="nav-arrow" id="nextBtn" onclick="changeCard(1)">❯</button>
+</div>
+
+<script>
+    // Отримуємо дані з моделі C# у JavaScript
+    const flashcards = @Html.Raw(Json.Serialize(Model));
+    let currentIndex = 0;
+
+    const card = document.getElementById('mainCard');
+    const userInput = document.getElementById('userInput');
+
+    // Функція відображення поточної картки
+    function updateCard() {
+        document.getElementById('qFront').innerText = flashcards[currentIndex].question;
+        document.getElementById('qBack').innerText = flashcards[currentIndex].question;
+        userInput.value = '';
+        card.classList.remove('is-flipped');
+
+        document.getElementById('cardCounter').innerText = (currentIndex + 1) + " / " + flashcards.length;
+
+        // Керування стрілками
+        document.getElementById('prevBtn').disabled = currentIndex === 0;
+        document.getElementById('nextBtn').disabled = currentIndex === flashcards.length - 1;
+    }
+
+    // Перевірка відповіді
+    function checkAnswer() {
+        const userValue = userInput.value.trim().toLowerCase();
+        const correctAnswer = flashcards[currentIndex].answer.trim().toLowerCase();
+
+        const isCorrect = userValue === correctAnswer;
+
+        const icon = document.getElementById('statusIcon');
+        const result = document.getElementById('resultText');
+
+        if (isCorrect) {
+            icon.innerHTML = '✅';
+            icon.className = 'status-icon correct';
+            result.innerHTML = `<b>Правильна відповідь:</b><br>${flashcards[currentIndex].answer}`;
+        } else {
+            icon.innerHTML = '❌';
+            icon.className = 'status-icon incorrect';
+            result.innerHTML = `<b>Правильна відповідь:</b> ${flashcards[currentIndex].answer}<br>
+                               <b>Ваша відповідь:</b> ${userInput.value}`;
+        }
+
+        card.classList.add('is-flipped');
+    }
+
+    function flipBack() {
+        card.classList.remove('is-flipped');
+    }
+
+    function changeCard(step) {
+        currentIndex += step;
+        if (currentIndex < 0) currentIndex = 0;
+        if (currentIndex >= flashcards.length) currentIndex = flashcards.length - 1;
+        updateCard();
+    }
+
+    // Підтримка клавіші Enter
+    userInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            checkAnswer();
+        }
+    });
+
+    // Ініціалізація першої картки
+    updateCard();
+</script>

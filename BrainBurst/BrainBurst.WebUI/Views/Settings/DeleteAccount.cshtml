@@ -1,0 +1,143 @@
+﻿@{
+    ViewData["Title"] = "Видалення акаунту";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .form-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        padding-top: 20px;
+    }
+
+    .page-title {
+        font-size: 36px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: black;
+        text-align: center;
+    }
+
+    /* Блок з попередженням */
+    .warning-box {
+        background-color: #FFF5F4;
+        border: 2px solid #FF3B30;
+        border-radius: 12px;
+        padding: 20px;
+        max-width: 500px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .warning-text {
+        color: #FF3B30;
+        font-weight: 700;
+        font-size: 16px;
+        margin: 0;
+        line-height: 1.5;
+    }
+
+    .delete-form {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        width: 100%;
+        max-width: 500px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-label {
+        font-weight: 800;
+        font-size: 18px;
+        margin-left: 5px;
+        color: black; /* Чорний замість червоного, бо червоного тут і так багато */
+    }
+
+    .input-field {
+        background-color: #D9D9D9;
+        border: none;
+        border-radius: 12px;
+        padding: 18px 25px;
+        font-size: 18px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: #333;
+        width: 100%;
+        box-sizing: border-box;
+        outline: none;
+    }
+
+    .button-group {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        margin-top: 10px;
+    }
+
+    /* Кнопка видалення (червона) */
+    .btn-danger {
+        background-color: #FF3B30;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 16px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+        transition: opacity 0.2s;
+    }
+
+        .btn-danger:hover {
+            opacity: 0.8;
+        }
+
+    /* Кнопка скасування */
+    .btn-cancel {
+        background-color: transparent;
+        color: black;
+        border: 2px solid #D9D9D9;
+        border-radius: 12px;
+        padding: 14px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        text-align: center;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+
+        .btn-cancel:hover {
+            background-color: #EFEFEF;
+        }
+</style>
+
+<div class="form-wrapper">
+    <h1 class="page-title">Видалити акаунт?</h1>
+
+    <div class="warning-box">
+        <p class="warning-text">Увага! Цю дію неможливо скасувати. Усі ваші флешкартки, створені тести, рейтинг та історія архіву будуть назавжди видалені.</p>
+    </div>
+
+    <form class="delete-form" action="/Settings/DeleteAccount" method="post">
+
+        <div class="form-group">
+            <div class="form-label">Введіть пароль для підтвердження</div>
+            <input type="password" name="password" class="input-field" placeholder="Ваш пароль" required>
+        </div>
+
+        <div class="button-group">
+            <button type="submit" class="btn-danger">Назавжди видалити акаунт</button>
+            <a href="/Settings" class="btn-cancel">Скасувати</a>
+        </div>
+
+    </form>
+</div>  

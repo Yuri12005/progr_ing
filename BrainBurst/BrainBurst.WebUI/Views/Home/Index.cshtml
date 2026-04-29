@@ -1,8 +1,139 @@
 ﻿@{
-    ViewData["Title"] = "Home Page";
+    // Цей рядок вимикає стандартне меню зверху/збоку, щоб сторінка була чистою
+    Layout = null;
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Вітаємо в BrainBurst</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* Загальні налаштування сторінки */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            display: flex; /* Робимо сторінку гнучкою для поділу на дві половини */
+            height: 100vh; /* Сторінка займає 100% висоти екрану */
+            overflow: hidden;
+        }
+
+        /* --- ЛІВА ЧАСТИНА (БІЛА) --- */
+        .left-side {
+            flex: 1; /* Займає половину екрану */
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .brand-title {
+            color: #FF3B30; /* Червоний колір з мокапу */
+            font-size: 64px;
+            font-weight: 800;
+            margin-bottom: 30px;
+            letter-spacing: 1px;
+        }
+
+        .brain-logo {
+            width: 300px; /* Можеш підібрати ширину під свій логотип */
+            height: auto;
+            margin-bottom: 50px;
+            display: block;
+        }
+
+        .auth-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            width: 280px;
+        }
+
+        .btn {
+            padding: 18px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none; /* Прибираємо підкреслення тексту */
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover {
+            opacity: 0.85; /* Ефект при наведенні мишки */
+        }
+
+        .btn-register {
+            background-color: black;
+            color: white;
+        }
+
+        .btn-login {
+            background-color: #5C5C5C; /* Темно-сірий колір */
+            color: white;
+        }
+
+        .footer-text {
+            position: absolute;
+            bottom: 25px;
+            color: #FF3B30;
+            font-weight: 700;
+            font-size: 13px;
+        }
+
+        /* --- ПРАВА ЧАСТИНА (ЧЕРВОНА) --- */
+        .right-side {
+            flex: 1; /* Займає другу половину екрану */
+            background-color: #FF3B30;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 50px;
+        }
+
+        .promo-text {
+            font-size: 28px;
+            line-height: 1.6;
+            font-weight: 400;
+            max-width: 550px;
+            text-align: center;
+        }
+
+        .promo-text strong {
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="left-side">
+        <div class="brand-title">BRAIN BURST</div>
+
+        <img src="/images/logo.png" class="brain-logo" alt="BrainBurst Logo">
+
+        <div class="auth-buttons">
+            <a href="/Account/Register" class="btn btn-register">Зареєструватися</a>
+            <a href="/Account/Login" class="btn btn-login" style="text-decoration: none; box-sizing: border-box;">Ввійти</a>
+        </div>
+
+        <div class="footer-text">Вивчай швидше. Запам'ятовуй надовше.</div>
+    </div>
+
+    <div class="right-side">
+        <div class="promo-text">
+            <strong>Brain Burst</strong> — це сучасна навчальна платформа, розроблена для того, щоб зробити навчання простим, <strong>ефективним та цікавим.</strong>
+            <br><br>
+            Створюйте власні набори карток, переглядайте тисячі готових колекцій та опановуйте будь-яку тему за допомогою інтерактивних режимів навчання.
+        </div>
+    </div>
+
+</body>
+</html>

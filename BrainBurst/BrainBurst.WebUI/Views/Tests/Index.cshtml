@@ -1,0 +1,148 @@
+﻿@model List<BrainBurst.WebUI.Controllers.TestViewModel>
+@{
+    ViewData["Title"] = "Мої тести";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Розділяємо тести на дві категорії
+    var continueStudying = Model.Where(t => !t.IsRecent).ToList();
+    var recent = Model.Where(t => t.IsRecent).ToList();
+}
+
+<style>
+    .page-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: black;
+    }
+
+    /* Рядок пошуку */
+    .search-container {
+        width: 100%;
+        margin-bottom: 30px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        border: 2px solid #FF3B30;
+        border-radius: 12px;
+        padding: 15px 20px;
+        font-size: 18px;
+        font-family: 'Inter', sans-serif;
+        box-sizing: border-box;
+        outline: none;
+    }
+
+    .search-icon {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 24px;
+        color: #FF3B30;
+    }
+
+    .section-title {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 20px;
+        color: black;
+    }
+
+    /* Сітка тестів */
+    .tests-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    /* Дизайн картки тесту */
+    .test-card {
+        width: 250px;
+        height: 140px;
+        background-color: #F8D7D5;
+        border: 2px solid #FF3B30;
+        border-radius: 16px;
+        padding: 20px;
+        box-sizing: border-box;
+        text-decoration: none;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .test-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(255, 59, 48, 0.2);
+        }
+
+    .test-title {
+        color: #FF3B30;
+        font-weight: 800;
+        font-size: 18px;
+        margin: 0;
+    }
+
+    .test-info {
+        color: #FF3B30;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Кнопка додавання (Плюс) */
+    .add-test-card {
+        width: 250px;
+        height: 140px;
+        background-color: #FF3B30;
+        border-radius: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-decoration: none;
+        color: white;
+        font-size: 60px;
+        font-weight: 400;
+        transition: transform 0.2s;
+    }
+
+        .add-test-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(255, 59, 48, 0.4);
+        }
+</style>
+
+<h1 class="page-title">Мої тести</h1>
+
+<div class="search-container">
+    <input type="text" class="search-input" placeholder="">
+    <div class="search-icon">🔍</div>
+</div>
+
+<h2 class="section-title">Продовжити вивчення</h2>
+<div class="tests-grid">
+    @foreach (var test in continueStudying)
+    {
+        <a href="/Tests/Take/@test.Id" class="test-card">
+            <h3 class="test-title">@test.Title</h3>
+            <p class="test-info">питань: @test.QuestionCount</p>
+        </a>
+    }
+</div>
+
+<h2 class="section-title">Нещодавні</h2>
+<div class="tests-grid">
+    @foreach (var test in recent)
+    {
+        <a href="/Tests/Take/@test.Id" class="test-card">
+            <h3 class="test-title">@test.Title</h3>
+            <p class="test-info">питань: @test.QuestionCount</p>
+        </a>
+    }
+
+    <a href="/Tests/Create" class="add-test-card">+</a>
+</div>

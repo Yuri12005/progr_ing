@@ -1,0 +1,127 @@
+﻿@{
+    ViewData["Title"] = "Створення картки";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    /* Контейнер для центрування всього вмісту на сторінці */
+    .form-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Центрування по горизонталі */
+        justify-content: flex-start;
+        width: 100%;
+        min-height: 80vh;
+    }
+
+    .page-title {
+        font-size: 36px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 40px;
+        color: black;
+        text-align: center;
+    }
+
+    /* Оновлена форма: стала ширшою та центрованою */
+    .create-form {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        width: 100%;
+        max-width: 750px; /* Збільшили ширину з 500px до 750px */
+        background-color: transparent;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-label {
+        font-weight: 800;
+        font-size: 18px;
+        margin-left: 5px;
+        color: #FF3B30;
+    }
+
+    .input-field {
+        background-color: #D9D9D9;
+        border: none;
+        border-radius: 15px;
+        padding: 18px 25px;
+        font-size: 17px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: #333;
+        width: 100%;
+        box-sizing: border-box;
+        outline: none;
+        transition: box-shadow 0.2s;
+    }
+
+        .input-field:focus {
+            box-shadow: 0 0 0 2px rgba(255, 59, 48, 0.3);
+        }
+
+    .textarea-field {
+        resize: vertical;
+        min-height: 150px;
+    }
+
+    /* Центрування кнопки */
+    .button-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .btn-submit {
+        background-color: black;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 18px 60px; /* Зробили кнопку довшою */
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s, opacity 0.2s;
+    }
+
+        .btn-submit:hover {
+            opacity: 0.85;
+            transform: translateY(-2px);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+</style>
+
+<div class="form-wrapper">
+    <h1 class="page-title">Створення нової картки</h1>
+
+    <form class="create-form" action="/Cards/Create" method="post">
+
+        <div class="form-group">
+            <div class="form-label">Тема для колоди</div>
+            <input type="text" name="topic" class="input-field" placeholder="Наприклад: Дискретна математика" required>
+        </div>
+
+        <div class="form-group">
+            <div class="form-label">Питання</div>
+            <input type="text" name="question" class="input-field" placeholder="Введіть питання для картки" required>
+        </div>
+
+        <div class="form-group">
+            <div class="form-label">Відповідь</div>
+            <textarea name="answer" class="input-field textarea-field" placeholder="Введіть розгорнуту відповідь" required></textarea>
+        </div>
+
+        <div class="button-container">
+            <button type="submit" class="btn-submit">Додати картку</button>
+        </div>
+
+    </form>
+</div>

@@ -1,0 +1,313 @@
+﻿@model List<BrainBurst.WebUI.Controllers.TestQuestionViewModel>
+@{
+    ViewData["Title"] = "Проходження тесту";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .page-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: black;
+        text-align: center;
+    }
+
+    /* --- ЗОНА ПРОХОДЖЕННЯ ТЕСТУ --- */
+    .test-zone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .test-card {
+        width: 100%;
+        max-width: 600px;
+        background-color: #F8D7D5;
+        border: 3px solid #FF3B30;
+        border-radius: 24px;
+        padding: 40px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+    }
+
+    .question-counter {
+        position: absolute;
+        top: -35px;
+        right: 0;
+        font-size: 20px;
+        font-weight: 800;
+        color: #FF3B30;
+    }
+
+    .question-text {
+        font-size: 24px;
+        font-weight: 800;
+        margin-bottom: 30px;
+        text-align: center;
+        width: 100%;
+        overflow-wrap: break-word;
+    }
+
+    .answer-input {
+        width: 100%;
+        background-color: white;
+        border: 2px solid #D9D9D9;
+        border-radius: 12px;
+        padding: 15px 20px;
+        font-size: 18px;
+        text-align: center;
+        outline: none;
+        box-sizing: border-box;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .btn-next {
+        margin-top: 30px;
+        background-color: black;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 16px 50px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+
+        .btn-next:hover {
+            opacity: 0.8;
+        }
+
+    /* --- ЗОНА РЕЗУЛЬТАТІВ (спочатку прихована) --- */
+    .result-zone {
+        display: none; /* Приховано за замовчуванням */
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 700px;
+        margin: 0 auto;
+    }
+
+    .score-board {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .score-circle {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background-color: #FF3B30;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto 20px auto;
+        box-shadow: 0 4px 15px rgba(255,59,48,0.3);
+    }
+
+    .score-points {
+        font-size: 40px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .score-percent {
+        font-size: 20px;
+        font-weight: 600;
+        margin-top: 5px;
+    }
+
+    /* Список відповідей */
+    .review-list {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .review-item {
+        background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 6px solid;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        text-align: left;
+    }
+
+        .review-item.correct {
+            border-color: #28a745;
+        }
+
+        .review-item.incorrect {
+            border-color: #FF3B30;
+        }
+
+    .review-q-num {
+        font-size: 14px;
+        font-weight: 800;
+        color: #777;
+        margin-bottom: 5px;
+    }
+
+    .review-q-text {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 15px;
+    }
+
+    .review-answer {
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    .ans-correct {
+        color: #28a745;
+        font-weight: 700;
+    }
+
+    .ans-wrong {
+        color: #FF3B30;
+        font-weight: 700;
+        text-decoration: line-through;
+    }
+
+    .btn-finish {
+        margin-top: 40px;
+        background-color: #FF3B30;
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        padding: 16px 40px;
+        font-size: 18px;
+        font-weight: 700;
+        display: inline-block;
+    }
+</style>
+
+<h1 class="page-title">@ViewBag.TestTitle</h1>
+
+<div class="test-zone" id="testZone">
+    <div class="test-card">
+        <div class="question-counter" id="qCounter">1 / 3</div>
+        <div class="question-text" id="qText">Завантаження...</div>
+
+        <input type="text" id="userInput" class="answer-input" placeholder="Введіть вашу відповідь..." autocomplete="off">
+
+        <button class="btn-next" onclick="nextQuestion()">Далі</button>
+    </div>
+</div>
+
+<div class="result-zone" id="resultZone">
+    <div class="score-board">
+        <div class="score-circle">
+            <div class="score-points" id="scorePoints">0 / 0</div>
+            <div class="score-percent" id="scorePercent">0%</div>
+        </div>
+        <h2>Результати тесту</h2>
+    </div>
+
+    <div class="review-list" id="reviewList">
+    </div>
+
+    <a href="/Tests" class="btn-finish">Повернутися до тестів</a>
+</div>
+
+<script>
+    // Отримуємо дані з C#
+    const questions = @Html.Raw(Json.Serialize(Model));
+
+    let currentIndex = 0;
+    let userAnswers = []; // Зберігатимемо всі відповіді користувача
+
+    const qText = document.getElementById('qText');
+    const qCounter = document.getElementById('qCounter');
+    const userInput = document.getElementById('userInput');
+
+    const testZone = document.getElementById('testZone');
+    const resultZone = document.getElementById('resultZone');
+
+    // Показує поточне питання
+    function renderQuestion() {
+        if (currentIndex >= questions.length) {
+            showResults();
+            return;
+        }
+
+        qText.innerText = questions[currentIndex].questionText;
+        qCounter.innerText = (currentIndex + 1) + " / " + questions.length;
+        userInput.value = '';
+        userInput.focus(); // Автоматично ставимо курсор у поле
+    }
+
+    // Зберігає відповідь і йде далі
+    function nextQuestion() {
+        // Зберігаємо те, що ввів користувач (навіть якщо порожньо)
+        userAnswers.push(userInput.value.trim());
+
+        currentIndex++;
+        renderQuestion();
+    }
+
+    // Підрахунок балів і показ фінального екрану
+    function showResults() {
+        testZone.style.display = 'none'; // Ховаємо тест
+        resultZone.style.display = 'flex'; // Показуємо результати
+
+        let correctCount = 0;
+        let reviewHtml = '';
+
+        for (let i = 0; i < questions.length; i++) {
+            const isCorrect = userAnswers[i].toLowerCase() === questions[i].correctAnswer.toLowerCase();
+
+            if (isCorrect) {
+                correctCount++;
+                reviewHtml += `
+                    <div class="review-item correct">
+                        <div class="review-q-num">Питання ${i + 1}</div>
+                        <div class="review-q-text">${questions[i].questionText}</div>
+                        <div class="review-answer">Ваша відповідь: <span class="ans-correct">${userAnswers[i]}</span></div>
+                    </div>
+                `;
+            } else {
+                // Якщо користувач нічого не ввів
+                const displayUserAns = userAnswers[i] === "" ? "(немає відповіді)" : userAnswers[i];
+
+                reviewHtml += `
+                    <div class="review-item incorrect">
+                        <div class="review-q-num">Питання ${i + 1}</div>
+                        <div class="review-q-text">${questions[i].questionText}</div>
+                        <div class="review-answer">Правильна відповідь: <span class="ans-correct">${questions[i].correctAnswer}</span></div>
+                        <div class="review-answer">Ваша відповідь: <span class="ans-wrong">${displayUserAns}</span></div>
+                    </div>
+                `;
+            }
+        }
+
+        // Оновлюємо кружечок з балами
+        const percent = Math.round((correctCount / questions.length) * 100);
+        document.getElementById('scorePoints').innerText = correctCount + " / " + questions.length;
+        document.getElementById('scorePercent').innerText = percent + "%";
+
+        // Вставляємо згенерований список
+        document.getElementById('reviewList').innerHTML = reviewHtml;
+    }
+
+    // Підтримка клавіші Enter
+    userInput.addEventListener("keypress", function(event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            nextQuestion();
+        }
+    });
+
+    // Запуск першого питання
+    renderQuestion();
+</script>

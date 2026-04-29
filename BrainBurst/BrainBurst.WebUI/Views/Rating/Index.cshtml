@@ -1,0 +1,159 @@
+﻿@model List<BrainBurst.WebUI.Controllers.UserRatingViewModel>
+@{
+    ViewData["Title"] = "Рейтинг";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    /* Робимо загальний контейнер сторінки, щоб права частина була червоною на всю висоту */
+    .rating-page-container {
+        display: flex;
+        width: calc(100% + 60px); /* Компенсуємо відступ справа з _Layout */
+        min-height: calc(100vh - 80px);
+        margin-top: -40px; /* Компенсуємо відступ зверху з _Layout */
+        margin-right: -60px;
+    }
+
+    /* Ліва частина - Таблиця */
+    .rating-left {
+        flex: 1.2;
+        padding: 40px 40px 40px 0;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .page-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 30px;
+        color: black;
+    }
+
+    .rating-header {
+        display: grid;
+        grid-template-columns: 50px 1fr 80px 120px;
+        gap: 15px;
+        font-weight: 600;
+        font-size: 16px;
+        margin-bottom: 15px;
+        text-align: center;
+        padding: 0 5px;
+    }
+
+        .rating-header > div:nth-child(2) {
+            text-align: left; /* Вирівнюємо "ім'я користувача" по лівому краю */
+        }
+
+    .rating-row {
+        display: grid;
+        grid-template-columns: 50px 1fr 80px 120px;
+        gap: 15px;
+        margin-bottom: 10px;
+        align-items: center;
+        font-weight: 700;
+    }
+
+    .rating-cell {
+        background-color: #F8D7D5; /* Світло-рожевий колір з мокапу */
+        padding: 12px 10px;
+        border-radius: 8px;
+        text-align: center;
+        color: #FF3B30;
+    }
+
+    .name-cell {
+        text-align: left;
+        padding-left: 20px;
+    }
+
+    .pos-cell {
+        font-size: 18px;
+        color: white;
+    }
+
+    /* Стилі для поточного користувача (виділений рядок) */
+    .current-user .rating-cell {
+        background-color: #E65A4B; /* Темніший помаранчево-червоний */
+        color: white;
+    }
+
+    /* Права частина - Червоний фон і подіум */
+    .rating-right {
+        flex: 1;
+        background-color: #FF3B30;
+        display: flex;
+        justify-content: center;
+        align-items: flex-end; /* Притискаємо подіум до низу */
+        padding-bottom: 50px;
+    }
+
+    /* Малюємо подіум на CSS */
+    .podium {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+    }
+
+    .podium-place {
+        border: 4px solid white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 80px;
+        font-weight: 800;
+        color: transparent;
+        -webkit-text-stroke: 4px white; /* Робить текст прозорим з білою обводкою */
+    }
+
+    .place-3 {
+        width: 130px;
+        height: 120px;
+    }
+
+    .place-1 {
+        width: 150px;
+        height: 200px;
+    }
+
+    .place-2 {
+        width: 140px;
+        height: 160px;
+    }
+</style>
+
+<div class="rating-page-container">
+
+    <div class="rating-left">
+        <h1 class="page-title">Рейтинг</h1>
+
+        <div class="rating-header">
+            <div>№</div>
+            <div>ім’я користувача</div>
+            <div>бали</div>
+            <div>ранг</div>
+        </div>
+
+        @foreach (var user in Model)
+        {
+            // Якщо це поточний користувач, додаємо клас current-user
+            var rowClass = user.IsCurrentUser ? "rating-row current-user" : "rating-row";
+
+            <div class="@rowClass">
+                <div class="rating-cell pos-cell">@user.Position</div>
+                <div class="rating-cell name-cell">@user.Username</div>
+                <div class="rating-cell">@user.Points</div>
+                <div class="rating-cell">@user.RankName</div>
+            </div>
+        }
+    </div>
+
+    <div class="rating-right">
+        <div class="podium">
+            <div class="podium-place place-3">3</div>
+            <div class="podium-place place-1">1</div>
+            <div class="podium-place place-2">2</div>
+        </div>
+    </div>
+
+</div>

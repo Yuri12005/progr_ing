@@ -1,0 +1,86 @@
+﻿@model List<BrainBurst.WebUI.Controllers.ArchiveTestViewModel>
+@{
+    ViewData["Title"] = "Архів тестів";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .page-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 30px;
+        color: black;
+    }
+
+    .archive-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 800px;
+    }
+
+    /* Дизайн плашки пройденого тесту */
+    .archive-item {
+        background-color: #F8D7D5;
+        border: 2px solid #FF3B30;
+        border-radius: 16px;
+        padding: 20px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        text-decoration: none;
+        color: black;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+        .archive-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 10px rgba(255, 59, 48, 0.2);
+        }
+
+    .archive-info {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .archive-title {
+        font-size: 20px;
+        font-weight: 800;
+        color: #FF3B30;
+        margin: 0;
+    }
+
+    .archive-meta {
+        font-size: 14px;
+        font-weight: 600;
+        color: #555;
+    }
+
+    .archive-score {
+        font-size: 28px;
+        font-weight: 800;
+        color: #FF3B30;
+        background-color: white;
+        padding: 10px 20px;
+        border-radius: 12px;
+    }
+</style>
+
+<h1 class="page-title">Архів пройдених тестів</h1>
+
+<div class="archive-list">
+    @foreach (var test in Model)
+    {
+        <a href="/Profile/ArchiveDetails/@test.TestId" class="archive-item">
+            <div class="archive-info">
+                <h3 class="archive-title">@test.Title</h3>
+                <div class="archive-meta">ID тесту: #@test.TestId &nbsp;|&nbsp; Дата: @test.DateTaken</div>
+            </div>
+            <div class="archive-score">
+                @test.Percent%
+            </div>
+        </a>
+    }
+</div>

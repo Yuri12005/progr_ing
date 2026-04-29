@@ -1,0 +1,155 @@
+﻿@model List<BrainBurst.WebUI.Controllers.ArchiveDetailViewModel>
+@{
+    ViewData["Title"] = "Деталі тесту";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .result-zone {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 700px;
+        margin: 0 auto;
+        padding-bottom: 50px;
+    }
+
+    .score-board {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .score-circle {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background-color: #FF3B30;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        margin: 0 auto 20px auto;
+        box-shadow: 0 4px 15px rgba(255,59,48,0.3);
+    }
+
+    .score-points {
+        font-size: 40px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .score-percent {
+        font-size: 20px;
+        font-weight: 600;
+        margin-top: 5px;
+    }
+
+    .review-list {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .review-item {
+        background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        border-left: 6px solid;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        text-align: left;
+    }
+
+        .review-item.correct {
+            border-color: #28a745;
+        }
+
+        .review-item.incorrect {
+            border-color: #FF3B30;
+        }
+
+    .review-q-num {
+        font-size: 14px;
+        font-weight: 800;
+        color: #777;
+        margin-bottom: 5px;
+    }
+
+    .review-q-text {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 15px;
+    }
+
+    .review-answer {
+        font-size: 16px;
+        margin-bottom: 5px;
+    }
+
+    .ans-correct {
+        color: #28a745;
+        font-weight: 700;
+    }
+
+    .ans-wrong {
+        color: #FF3B30;
+        font-weight: 700;
+        text-decoration: line-through;
+    }
+
+    .btn-finish {
+        margin-top: 40px;
+        background-color: black;
+        color: white;
+        text-decoration: none;
+        border-radius: 12px;
+        padding: 16px 40px;
+        font-size: 18px;
+        font-weight: 700;
+        transition: opacity 0.2s;
+    }
+
+        .btn-finish:hover {
+            opacity: 0.8;
+        }
+</style>
+
+<div class="result-zone">
+    <div class="score-board">
+        <div class="score-circle">
+            <div class="score-points">@ViewBag.ScorePoints</div>
+            <div class="score-percent">@ViewBag.ScorePercent</div>
+        </div>
+        <h2>@ViewBag.TestTitle</h2>
+    </div>
+
+    <div class="review-list">
+        @{
+            int qNum = 1;
+        }
+        @foreach (var item in Model)
+        {
+            var itemClass = item.IsCorrect ? "review-item correct" : "review-item incorrect";
+
+            <div class="@itemClass">
+                <div class="review-q-num">Питання @qNum</div>
+                <div class="review-q-text">@item.QuestionText</div>
+
+                @if (item.IsCorrect)
+                {
+                    <div class="review-answer">Ваша відповідь: <span class="ans-correct">@item.UserAnswer</span></div>
+                }
+                else
+                {
+                    <div class="review-answer">Правильна відповідь: <span class="ans-correct">@item.CorrectAnswer</span></div>
+                    <div class="review-answer">Ваша відповідь: <span class="ans-wrong">@(string.IsNullOrEmpty(item.UserAnswer) ? "(немає відповіді)" : item.UserAnswer)</span></div>
+                }
+            </div>
+            qNum++;
+        }
+    </div>
+
+    <a href="/Profile/Archive" class="btn-finish">Назад до архіву</a>
+</div>
