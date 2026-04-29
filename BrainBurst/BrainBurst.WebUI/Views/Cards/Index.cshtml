@@ -1,0 +1,148 @@
+﻿@model List<BrainBurst.WebUI.Controllers.DeckViewModel>
+@{
+    ViewData["Title"] = "Мої картки";
+    Layout = "~/Views/Shared/_Layout.cshtml"; // Підключаємо червоне меню
+
+    // Фільтруємо списки для двох різних секцій
+    var continueStudying = Model.Where(d => !d.IsRecent).ToList();
+    var recent = Model.Where(d => d.IsRecent).ToList();
+}
+
+<style>
+    .page-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 15px;
+        color: black;
+    }
+
+    /* Рядок пошуку */
+    .search-container {
+        width: 100%;
+        margin-bottom: 30px;
+        position: relative;
+    }
+
+    .search-input {
+        width: 100%;
+        border: 2px solid #FF3B30;
+        border-radius: 12px;
+        padding: 15px 20px;
+        font-size: 18px;
+        font-family: 'Inter', sans-serif;
+        box-sizing: border-box;
+        outline: none;
+    }
+
+    .search-icon {
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 24px;
+        color: #FF3B30;
+    }
+
+    .section-title {
+        font-size: 22px;
+        font-weight: 800;
+        margin-bottom: 20px;
+        color: black;
+    }
+
+    /* Сітка карток */
+    .cards-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin-bottom: 40px;
+    }
+
+    /* Дизайн самої картки */
+    .deck-card {
+        width: 250px;
+        height: 140px;
+        background-color: #F8D7D5; /* Світло-червоний/рожевий фон */
+        border: 2px solid #FF3B30;
+        border-radius: 16px;
+        padding: 20px;
+        box-sizing: border-box;
+        text-decoration: none; /* Прибираємо підкреслення посилання */
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .deck-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 10px rgba(255, 59, 48, 0.2);
+    }
+
+    .deck-title {
+        color: #FF3B30;
+        font-weight: 800;
+        font-size: 18px;
+        margin: 0;
+    }
+
+    .deck-date {
+        color: #FF3B30;
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Кнопка додавання (Плюс) */
+    .add-deck-card {
+        width: 250px;
+        height: 140px;
+        background-color: #FF3B30;
+        border-radius: 16px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-decoration: none;
+        color: white;
+        font-size: 60px;
+        font-weight: 400;
+        transition: transform 0.2s;
+    }
+
+    .add-deck-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 10px rgba(255, 59, 48, 0.4);
+    }
+</style>
+
+<h1 class="page-title">Мої картки</h1>
+
+<div class="search-container">
+    <input type="text" class="search-input" placeholder="">
+    <div class="search-icon">🔍</div>
+</div>
+
+<h2 class="section-title">Продовжити вивчення</h2>
+<div class="cards-grid">
+    @foreach (var deck in continueStudying)
+    {
+        <a href="/Cards/Details/@deck.Id" class="deck-card">
+            <h3 class="deck-title">@deck.Title</h3>
+            <p class="deck-date">створено: @deck.CreatedDate</p>
+        </a>
+    }
+</div>
+
+<h2 class="section-title">Нещодавні</h2>
+<div class="cards-grid">
+    @foreach (var deck in recent)
+    {
+        <a href="/Cards/Details/@deck.Id" class="deck-card">
+            <h3 class="deck-title">@deck.Title</h3>
+            <p class="deck-date">створено: @deck.CreatedDate</p>
+        </a>
+    }
+
+    <a href="/Cards/Create" class="add-deck-card">+</a>
+</div>

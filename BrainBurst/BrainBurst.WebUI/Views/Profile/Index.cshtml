@@ -1,0 +1,109 @@
+﻿@{
+    ViewData["Title"] = "Профіль";
+    // Підключаємо наш шаблон із червоним сайдбаром
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .page-title {
+        font-size: 32px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 40px;
+        color: black;
+    }
+
+    .profile-header {
+        display: flex;
+        align-items: center;
+        gap: 40px;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background-color: #E0E0E0; /* Колір-заглушка для аватарки */
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 60px;
+        overflow: hidden;
+    }
+
+        /* Якщо в майбутньому додасте справжнє фото */
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+    .profile-info {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .profile-top-row {
+        display: flex;
+        align-items: center;
+        gap: 30px;
+    }
+
+    .profile-nickname {
+        font-size: 24px;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .profile-actions {
+        display: flex;
+        gap: 15px;
+    }
+
+    .btn-secondary {
+        background-color: #D9D9D9;
+        color: black;
+        border: none;
+        border-radius: 8px;
+        padding: 10px 20px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+        .btn-secondary:hover {
+            background-color: #C0C0C0;
+        }
+
+    .profile-stats {
+        font-size: 18px;
+        font-weight: 800;
+    }
+</style>
+
+<h1 class="page-title">Профіль</h1>
+
+<div class="profile-header">
+
+    <div class="profile-avatar">
+        ☁️
+    </div>
+
+    <div class="profile-info">
+        <div class="profile-top-row">
+            <h2 class="profile-nickname">нікнейм</h2>
+
+            <div class="profile-actions">
+                <a href="/Profile/Edit" class="btn-secondary" style="text-decoration: none;">Редагувати профіль</a>
+                <a href="/Profile/Archive" class="btn-secondary" style="text-decoration: none;">Переглянути архів</a>
+            </div>
+        </div>
+
+        <div class="profile-stats">
+            6 флешкарток
+        </div>
+    </div>
+
+</div>

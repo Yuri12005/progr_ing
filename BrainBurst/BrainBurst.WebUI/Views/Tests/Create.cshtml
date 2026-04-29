@@ -1,0 +1,270 @@
+﻿@model List<BrainBurst.WebUI.Controllers.TestViewModel>
+@{
+    ViewData["Title"] = "Створення тесту";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    .form-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        padding-bottom: 50px;
+    }
+
+    .page-title {
+        font-size: 36px;
+        font-weight: 800;
+        margin-top: 0;
+        margin-bottom: 40px;
+        color: black;
+        text-align: center;
+    }
+
+    .create-form {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        width: 100%;
+        max-width: 750px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .form-label {
+        font-weight: 800;
+        font-size: 18px;
+        margin-left: 5px;
+        color: #FF3B30;
+    }
+
+    .input-field {
+        background-color: #D9D9D9;
+        border: none;
+        border-radius: 15px;
+        padding: 18px 25px;
+        font-size: 17px;
+        font-family: 'Inter', sans-serif;
+        font-weight: 600;
+        color: #333;
+        width: 100%;
+        box-sizing: border-box;
+        outline: none;
+    }
+
+    /* Зона завантаження файлу */
+    .file-upload-zone {
+        border: 3px dashed #FF3B30;
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        background-color: #FFF5F4;
+        transition: background-color 0.2s;
+    }
+
+        .file-upload-zone:hover {
+            background-color: #FFEBE9;
+        }
+
+    .file-input {
+        display: none;
+    }
+    /* Ховаємо стандартну кнопку файлу */
+
+    .btn-upload {
+        background-color: #FF3B30;
+        color: white;
+        border: none;
+        border-radius: 10px;
+        padding: 12px 30px;
+        font-size: 16px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-bottom: 10px;
+    }
+
+    .file-name-display {
+        font-size: 14px;
+        color: #555;
+        font-weight: 600;
+    }
+
+    /* Розділювач АБО */
+    .divider {
+        text-align: center;
+        font-weight: 800;
+        color: #999;
+        font-size: 20px;
+        margin: 10px 0;
+        position: relative;
+    }
+
+        .divider::before, .divider::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            width: 40%;
+            height: 2px;
+            background-color: #D9D9D9;
+        }
+
+        .divider::before {
+            left: 0;
+        }
+
+        .divider::after {
+            right: 0;
+        }
+
+    /* Сітка вибору колоди */
+    .decks-grid {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+
+    .deck-selectable {
+        width: 230px;
+        height: 120px;
+        background-color: #F8D7D5;
+        border: 2px solid #FF3B30;
+        border-radius: 16px;
+        padding: 20px;
+        box-sizing: border-box;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: all 0.2s;
+    }
+
+        .deck-selectable:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Клас для обраної колоди */
+        .deck-selectable.selected {
+            background-color: #FF3B30;
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(255, 59, 48, 0.4);
+        }
+
+    .deck-title {
+        color: #FF3B30;
+        font-weight: 800;
+        font-size: 16px;
+        margin: 0;
+    }
+
+    .deck-info {
+        color: #FF3B30;
+        font-size: 13px;
+        font-weight: 600;
+        margin: 0;
+    }
+
+    /* Зміна кольору тексту, якщо колода обрана */
+    .deck-selectable.selected .deck-title,
+    .deck-selectable.selected .deck-info {
+        color: white;
+    }
+
+    /* Головна кнопка */
+    .btn-submit {
+        background-color: black;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        padding: 18px 60px;
+        font-size: 18px;
+        font-weight: 700;
+        cursor: pointer;
+        margin-top: 20px;
+        align-self: center;
+        transition: opacity 0.2s;
+    }
+
+        .btn-submit:hover {
+            opacity: 0.85;
+        }
+</style>
+
+<div class="form-wrapper">
+    <h1 class="page-title">Створення нового тесту</h1>
+
+    <form class="create-form" action="/Tests/Create" method="post" enctype="multipart/form-data">
+
+        <input type="hidden" name="generationType" id="genType" value="none">
+        <input type="hidden" name="selectedDeckId" id="selectedDeckId" value="">
+
+        <div class="form-group">
+            <div class="form-label">Назва тесту</div>
+            <input type="text" name="testName" class="input-field" placeholder="Наприклад: Підсумковий тест з психології" required>
+        </div>
+
+        <div class="form-label" style="margin-top: 15px;">Джерело питань</div>
+
+        <div class="file-upload-zone" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" name="uploadedFile" class="file-input" onchange="handleFileSelect(this)">
+            <button type="button" class="btn-upload">Обрати файл з комп'ютера</button>
+            <div class="file-name-display" id="fileNameDisplay">Або перетягніть PDF / DOCX сюди (ШІ-генерація)</div>
+        </div>
+
+        <div class="divider">АБО</div>
+
+        <div class="form-group">
+            <div style="font-weight: 600; color: #555; margin-bottom: 10px;">Оберіть готову колоду карток:</div>
+
+            <div class="decks-grid">
+                @foreach (var deck in Model)
+                {
+                    <div class="deck-selectable" onclick="selectDeck(this, @deck.Id)">
+                        <h3 class="deck-title">@deck.Title</h3>
+                        <p class="deck-info">питань: @deck.QuestionCount</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <button type="submit" class="btn-submit">Створити тест</button>
+    </form>
+</div>
+
+<script>
+    // Логіка для вибору колоди
+    function selectDeck(element, deckId) {
+        // Знімаємо виділення з усіх колод
+        document.querySelectorAll('.deck-selectable').forEach(el => el.classList.remove('selected'));
+
+        // Додаємо виділення на клікнуту
+        element.classList.add('selected');
+
+        // Записуємо дані в приховані поля для бекенду
+        document.getElementById('genType').value = 'deck';
+        document.getElementById('selectedDeckId').value = deckId;
+
+        // Очищаємо вибір файлу, бо обрали колоду
+        document.getElementById('fileInput').value = '';
+        document.getElementById('fileNameDisplay').innerText = "Або перетягніть PDF / DOCX сюди (ШІ-генерація)";
+    }
+
+    // Логіка для вибору файлу
+    function handleFileSelect(input) {
+        if (input.files && input.files.length > 0) {
+            // Відображаємо назву файлу
+            document.getElementById('fileNameDisplay').innerText = "Обрано файл: " + input.files[0].name;
+
+            // Записуємо дані в приховані поля
+            document.getElementById('genType').value = 'file';
+            document.getElementById('selectedDeckId').value = '';
+
+            // Знімаємо виділення з колод, бо обрали файл
+            document.querySelectorAll('.deck-selectable').forEach(el => el.classList.remove('selected'));
+        }
+    }
+</script>
