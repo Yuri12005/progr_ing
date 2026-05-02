@@ -25,53 +25,28 @@ namespace BrainBurst.WebUI
 
                 var builder = WebApplication.CreateBuilder(args);
 
-                // === 2. ДОДАЄМО SERILOG ДО ВЕБА ===
+                // Підключаємо Serilog до хоста
                 builder.Host.UseSerilog();
 
-                // Add services to the container.
+                // Додаємо сервіси MVC
                 builder.Services.AddControllersWithViews();
 
-                // === 3. РЕЄСТРАЦІЯ БАЗИ ДАНИХ ===
+                // === 2. РЕЄСТРАЦІЯ БАЗИ ДАНИХ ===
                 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
-                
-                // Якщо використовуєш PostgreSQL:
                 builder.Services.AddDbContext<ApplicationDbContext>(options =>
                     options.UseNpgsql(connectionString));
+                // === РЕЄСТРАЦІЯ РЕПОЗИТОРІЇВ ===
+                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.IUserRepository, BrainBurst.Infrastructure.Persistence.Repositories.UserRepository>();
+                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.IFlashcardRepository, BrainBurst.Infrastructure.Persistence.Repositories.FlashcardRepository>();
+                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.ITestRepository, BrainBurst.Infrastructure.Persistence.Repositories.TestRepository>();
+                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.ITestResultRepository, BrainBurst.Infrastructure.Persistence.Repositories.TestResultRepository>();
 
                 var app = builder.Build();
 
-                // === 4. ПРЯМА ПЕРЕВІРКА ПІДКЛЮЧЕННЯ ПРИ ЗАПУСКУ ===
-                using (var scope = app.Services.CreateScope())
-                {
-                    var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-                    
-                    try
-                    {
-                        Log.Information("Checking database connection...");
-                        
-                        if (dbContext.Database.CanConnect())
-                        {
-                            Log.Information("Database connection established successfully!");
-                        }
-                        else
-                        {
-                            Log.Warning("Server found, but unable to connect to database");
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        Log.Error(ex, "Error checking database connection");
-                    }
-                }
-
-                // === 5. ДОДАЄМО HTTP LOGGING MIDDLEWARE ===
-                // app.UseMiddleware<HttpRequestLoggingMiddleware>();
-
-                // Configure the HTTP request pipeline.
+                // === 3. НАЛАШТУВАННЯ HTTP PIPELINE ===
                 if (!app.Environment.IsDevelopment())
                 {
                     app.UseExceptionHandler("/Home/Error");
-                    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
                     app.UseHsts();
                 }
 
