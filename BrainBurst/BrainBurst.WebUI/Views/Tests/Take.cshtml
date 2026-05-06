@@ -258,15 +258,26 @@
 
     // Підрахунок балів і показ фінального екрану
     function showResults() {
-        testZone.style.display = 'none'; // Ховаємо тест
-        resultZone.style.display = 'flex'; // Показуємо результати
+        testZone.style.display = 'none';
+        resultZone.style.display = 'flex';
 
         let correctCount = 0;
         let reviewHtml = '';
 
+        // НОВЕ: Створюємо масив для відправки на бекенд
+        let detailedAnswers = [];
+
         for (let i = 0; i < questions.length; i++) {
             const isCorrect = userAnswers[i].toLowerCase() === questions[i].correctAnswer.toLowerCase();
 
+            // Додаємо інформацію про це питання в наш масив для бази даних
+            detailedAnswers.push({
+                flashcardId: questions[i].id, // беремо ID картки
+                isCorrect: isCorrect,          // зберігаємо чи правильна відповідь
+                userInput: userAnswers[i]
+            });
+
+            // Твій старий код для малювання карток залишається без змін:
             if (isCorrect) {
                 correctCount++;
                 reviewHtml += `
@@ -277,9 +288,7 @@
                     </div>
                 `;
             } else {
-                // Якщо користувач нічого не ввів
                 const displayUserAns = userAnswers[i] === "" ? "(немає відповіді)" : userAnswers[i];
-
                 reviewHtml += `
                     <div class="review-item incorrect">
                         <div class="review-q-num">Питання ${i + 1}</div>
@@ -291,14 +300,31 @@
             }
         }
 
-        // Оновлюємо кружечок з балами
         const percent = Math.round((correctCount / questions.length) * 100);
         document.getElementById('scorePoints').innerText = correctCount + " / " + questions.length;
         document.getElementById('scorePercent').innerText = percent + "%";
-
-        // Вставляємо згенерований список
         document.getElementById('reviewList').innerHTML = reviewHtml;
-    }
+
+        // ВІДПРАВКА ДАНИХ НА СЕРВЕР (тепер з деталями!)
+        fetch('/Tests/SubmitResult', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                testId: parseInt(currentTestId),
+                scorePercent: percent,
+                answers: detailedAnswers // <--- Ось тут ми передаємо список усіх відповідей у БД
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Результат та статистика успішно збережені в базу!", data);
+        })
+        .catch(error => {
+            console.error("Помилка при збереженні:", error);
+        });
+    }}
 
     // Підтримка клавіші Enter
     userInput.addEventListener("keypress", function(event) {

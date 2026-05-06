@@ -64,7 +64,7 @@ namespace BrainBurst.WebUI
                 Log.Information("Application started successfully!");
                 app.Run();
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex.GetType().Name != "HostAbortedException")
             {
                 Log.Fatal(ex, "Critical error starting application");
             }

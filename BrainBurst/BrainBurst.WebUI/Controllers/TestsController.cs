@@ -1,6 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.EntityFrameworkCore;
+using BrainBurst.Infrastructure.Persistence; // Підключаємо контекст бази
+using BrainBurst.Domain.Entities;
+using System.IO;
 
 namespace BrainBurst.WebUI.Controllers
 {
@@ -20,41 +25,75 @@ namespace BrainBurst.WebUI.Controllers
         public string CorrectAnswer { get; set; }
     }
 
+    // Класи-кур'єри для отримання даних з JavaScript
+    public class TestSubmissionData
+    {
+        public int TestId { get; set; }
+        public decimal ScorePercent { get; set; }
+        public List<AnswerDetail> Answers { get; set; }
+    }
+
+    public class AnswerDetail
+    {
+        public int FlashcardId { get; set; }
+        public bool IsCorrect { get; set; }
+        public string UserInput { get; set; } // Поле для тексту
+    }
+
 
     public class TestsController : Controller
     {
+        // Змінна для нашої бази даних
+        private readonly ApplicationDbContext _context;
+
+        // Конструктор, через який система автоматично передає підключення до БД
+        public TestsController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
         public IActionResult Index()
         {
-            // Створюємо список тестів (заглушка до підключення БД)
-            var tests = new List<TestViewModel>
-            {
-                new TestViewModel { Id = 1, Title = "дискретна математика", QuestionCount = 27, IsRecent = false },
-                new TestViewModel { Id = 2, Title = "математичний аналіз", QuestionCount = 106, IsRecent = false },
-                new TestViewModel { Id = 3, Title = "психологія", QuestionCount = 244, IsRecent = false },
-                new TestViewModel { Id = 4, Title = "англійська мова", QuestionCount = 190, IsRecent = false },
-                new TestViewModel { Id = 5, Title = "програмування", QuestionCount = 32, IsRecent = false },
-                new TestViewModel { Id = 6, Title = "теорія ігор", QuestionCount = 56, IsRecent = false },
-
-                // Нещодавні
-                new TestViewModel { Id = 7, Title = "теорія ігор", QuestionCount = 56, IsRecent = true },
-                new TestViewModel { Id = 8, Title = "психологія", QuestionCount = 244, IsRecent = true }
-            };
+            // Беремо всі тести з реальної бази даних і перетворюємо їх у TestViewModel
+            var tests = _context.Tests
+                .Select(t => new TestViewModel
+                {
+                    Id = t.TestId,
+                    Title = t.Title,
+                    QuestionCount = 0, // Поки ставимо 0, бо зв'язку з питаннями ще немає
+                    IsRecent = false
+                })
+                .ToList();
 
             return View(tests);
         }
 
+        // 2. ПРОХОДЖЕННЯ ТЕСТУ
         public IActionResult Take(int id)
         {
-            // Заглушка: список питань для перевірки UI
-            var questions = new List<TestQuestionViewModel>
-            {
-                new TestQuestionViewModel { Id = 1, QuestionText = "Що таке поліморфізм?", CorrectAnswer = "Здатність об'єктів різних класів реагувати на однакові виклики методів" },
-                new TestQuestionViewModel { Id = 2, QuestionText = "Скільки байтів займає тип int у C#?", CorrectAnswer = "4" },
-                new TestQuestionViewModel { Id = 3, QuestionText = "Який модифікатор доступу робить член класу доступним лише всередині цього ж класу?", CorrectAnswer = "private" }
-            };
+            // 1. Шукаємо тест за ID, включаючи пов'язаний Тег та всі його Картки
+            var test = _context.Tests
+                .Include(t => t.Tag)
+                    .ThenInclude(tag => tag.Flashcards)
+                .FirstOrDefault(t => t.TestId == id);
 
-            // Передаємо назву тесту через ViewBag для заголовка
-            ViewBag.TestTitle = "Програмування C#";
+            if (test == null) return NotFound();
+
+            ViewBag.TestTitle = test.Title;
+
+            // 2. Якщо у теста немає прив'язаної колоди (тегу)
+            if (test.Tag == null)
+            {
+                return View(new List<TestQuestionViewModel>());
+            }
+
+            // 3. Мапимо реальні картки з бази у твою TestQuestionViewModel
+            var questions = test.Tag.Flashcards.Select(f => new TestQuestionViewModel
+            {
+                Id = f.FlashcardId,
+                QuestionText = f.Question,
+                CorrectAnswer = f.Answer
+            }).ToList();
 
             return View(questions);
         }
@@ -63,26 +102,104 @@ namespace BrainBurst.WebUI.Controllers
         [HttpGet]
         public IActionResult Create()
         {
-            // Беремо кілька колод для прикладу, щоб показати їх на сторінці вибору
-            var availableDecks = new List<TestViewModel>
-            {
-                new TestViewModel { Id = 1, Title = "дискретна математика", QuestionCount = 27 },
-                new TestViewModel { Id = 2, Title = "математичний аналіз", QuestionCount = 106 },
-                new TestViewModel { Id = 3, Title = "психологія", QuestionCount = 244 }
-            };
+            // Беремо РЕАЛЬНІ колоди (Теги) з бази даних для випадаючого списку
+            var availableDecks = _context.Tags
+                .Include(t => t.Flashcards)
+                .Select(t => new TestViewModel
+                {
+                    Id = t.TagId,
+                    Title = t.Name,
+                    QuestionCount = t.Flashcards.Count
+                })
+                .ToList();
 
             return View(availableDecks);
         }
 
         // МЕТОД 2: Приймає дані після натискання "Створити тест"
         [HttpPost]
-        public IActionResult Create(string testName, string generationType, int? selectedDeckId)
+        public IActionResult Create(string testName, string generationType, int? selectedDeckId, IFormFile? uploadedFile)
         {
-            // ПІЗНІШЕ ТУТ БУДЕ ЛОГІКА:
-            // Якщо generationType == "file" -> відправляємо файл в OpenAI
-            // Якщо generationType == "deck" -> беремо питання з колоди selectedDeckId
+            if (string.IsNullOrEmpty(testName))
+            {
+                return RedirectToAction("Index");
+            }
+
+            var currentUser = _context.Users.FirstOrDefault();
+            int creatorId = currentUser != null ? currentUser.UserId : 1;
+
+            int? finalTagId = null;
+
+            if (generationType == "deck" && selectedDeckId.HasValue)
+            {
+                finalTagId = selectedDeckId.Value;
+            }
+            else if (generationType == "file" && uploadedFile != null && uploadedFile.Length > 0)
+            {
+                string fileContent;
+                using (var stream = new StreamReader(uploadedFile.OpenReadStream()))
+                {
+                    fileContent = stream.ReadToEnd();
+                }
+
+                var aiTag = new Tag { Name = testName + " (AI згенеровано)" };
+                _context.Tags.Add(aiTag);
+                _context.SaveChanges();
+
+                finalTagId = aiTag.TagId;
+            }
+            else
+            {
+                return RedirectToAction("Index");
+            }
+
+            var newTest = new Test
+            {
+                Title = testName,
+                CreatorId = creatorId,
+                TagId = finalTagId
+            };
+
+            _context.Tests.Add(newTest);
+            _context.SaveChanges();
 
             return RedirectToAction("Index");
         }
-    }
-}
+
+        // МЕТОД 3: Збереження результатів тесту (тепер він правильно всередині класу!)
+        [HttpPost]
+        public IActionResult SubmitResult([FromBody] TestSubmissionData data)
+        {
+            var currentUser = _context.Users.FirstOrDefault();
+            int userId = currentUser != null ? currentUser.UserId : 1;
+
+            var questionResultsList = new List<QuestionResult>();
+
+            if (data.Answers != null)
+            {
+                foreach (var ans in data.Answers)
+                {
+                    questionResultsList.Add(new QuestionResult
+                    {
+                        FlashcardId = ans.FlashcardId,
+                        IsCorrect = ans.IsCorrect,
+                        UserInput = ans.UserInput ?? ""
+                    });
+                }
+            }
+
+            var testResult = new TestResult
+            {
+                TestId = data.TestId,
+                UserId = userId,
+                CorrectAnswersPercent = data.ScorePercent,
+                QuestionResults = questionResultsList
+            };
+
+            _context.TestResults.Add(testResult);
+            _context.SaveChanges();
+
+            return Json(new { success = true });
+        }
+    } // <--- ОДНА закриваюча дужка для TestsController
+} // <--- ОДНА закриваюча дужка для namespace

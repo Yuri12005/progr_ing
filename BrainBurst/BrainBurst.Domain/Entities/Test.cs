@@ -6,6 +6,15 @@ namespace BrainBurst.Domain.Entities;
 public class Test
 {
     public int TestId { get; set; }
+
+    public string Title { get; set; } = string.Empty;
+
+    // === НОВІ ПОЛЯ ===
+    // Робимо Nullable (int?), бо раптом колись ви додасте тести з файлів, де колоди немає
+    public int? TagId { get; set; }
+    public Tag? Tag { get; set; }
+
+
     public int CreatorId { get; set; }
     public User Creator { get; set; } = null!;
 

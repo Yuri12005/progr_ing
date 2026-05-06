@@ -3,6 +3,7 @@ using System;
 using BrainBurst.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BrainBurst.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260506204438_AddTestTitle")]
+    partial class AddTestTitle
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -115,9 +118,6 @@ namespace BrainBurst.Infrastructure.Migrations
                     b.Property<int>("CreatorId")
                         .HasColumnType("integer");
 
-                    b.Property<int?>("TagId")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasColumnType("text");
@@ -125,8 +125,6 @@ namespace BrainBurst.Infrastructure.Migrations
                     b.HasKey("TestId");
 
                     b.HasIndex("CreatorId");
-
-                    b.HasIndex("TagId");
 
                     b.ToTable("Tests");
                 });
@@ -264,13 +262,7 @@ namespace BrainBurst.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BrainBurst.Domain.Entities.Tag", "Tag")
-                        .WithMany()
-                        .HasForeignKey("TagId");
-
                     b.Navigation("Creator");
-
-                    b.Navigation("Tag");
                 });
 
             modelBuilder.Entity("BrainBurst.Domain.Entities.TestResult", b =>
