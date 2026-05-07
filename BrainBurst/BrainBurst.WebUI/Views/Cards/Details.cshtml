@@ -147,7 +147,9 @@
     <div class="card-scene">
 
         <div class="card-counter" id="cardCounter"></div>
+        <div class="card-counter" id="cardCounter"></div>
 
+        <button onclick="deleteCurrentCard()" style="position: absolute; top: -35px; left: 15px; background: none; border: none; font-size: 20px; cursor: pointer;" title="Видалити картку">🗑️</button>
         <div class="card" id="mainCard">
 
             <div class="card-face card-face-front">
@@ -224,6 +226,21 @@
         if (currentIndex < 0) currentIndex = 0;
         if (currentIndex >= flashcards.length) currentIndex = flashcards.length - 1;
         updateCard();
+    }
+
+    // Функція для видалення поточної картки
+    function deleteCurrentCard() {
+        if (confirm("Ви впевнені, що хочете назавжди видалити цю картку?")) {
+            const cardId = flashcards[currentIndex].id; // Беремо ID картки
+            const deckId = @ViewContext.RouteData.Values["id"]; // Беремо ID колоди з URL
+
+            // Створюємо приховану форму і відправляємо POST-запит
+            const form = document.createElement('form');
+            form.method = 'post';
+            form.action = `/Cards/DeleteCard?cardId=${cardId}&deckId=${deckId}`;
+            document.body.appendChild(form);
+            form.submit();
+        }
     }
 
     // Підтримка клавіші Enter

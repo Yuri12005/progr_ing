@@ -1,7 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using BrainBurst.Infrastructure.Persistence;
 using Serilog;
-
+using BrainBurst.Application.Interfaces.Repositories;
+using BrainBurst.Application.Interfaces.Services;
+using BrainBurst.Application.Services;
+using BrainBurst.Infrastructure.Persistence.Repositories;
 namespace BrainBurst.WebUI
 {
     public class Program
@@ -36,10 +39,24 @@ namespace BrainBurst.WebUI
                 builder.Services.AddDbContext<ApplicationDbContext>(options =>
                     options.UseNpgsql(connectionString));
                 // === РЕЄСТРАЦІЯ РЕПОЗИТОРІЇВ ===
-                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.IUserRepository, BrainBurst.Infrastructure.Persistence.Repositories.UserRepository>();
-                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.IFlashcardRepository, BrainBurst.Infrastructure.Persistence.Repositories.FlashcardRepository>();
-                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.ITestRepository, BrainBurst.Infrastructure.Persistence.Repositories.TestRepository>();
-                builder.Services.AddScoped<BrainBurst.Application.Interfaces.Repositories.ITestResultRepository, BrainBurst.Infrastructure.Persistence.Repositories.TestResultRepository>();
+                // === РЕЄСТРАЦІЯ РЕПОЗИТОРІЇВ ===
+                // Використовуємо єдиний стиль реєстрації через інтерфейси та їхні реалізації
+                builder.Services.AddScoped<IUserRepository, UserRepository>();
+                builder.Services.AddScoped<IFlashcardRepository, FlashcardRepository>();
+                builder.Services.AddScoped<ITestRepository, TestRepository>();
+                builder.Services.AddScoped<ITestResultRepository, TestResultRepository>();
+
+                // ОБОВ'ЯЗКОВО ДОДАТИ: Репозиторій для колод (тегів)
+                builder.Services.AddScoped<ITagRepository, TagRepository>();
+
+                // === РЕЄСТРАЦІЯ СЕРВІСІВ ===
+                builder.Services.AddScoped<IFlashcardService, FlashcardService>();
+                builder.Services.AddScoped<ITestService, TestService>();
+
+                // ОБОВ'ЯЗКОВО ДОДАТИ: Сервіс для колод (тегів)
+                builder.Services.AddScoped<ITagService, TagService>();
+
+                builder.Services.AddScoped<IArchiveService, ArchiveService>();
 
                 var app = builder.Build();
 

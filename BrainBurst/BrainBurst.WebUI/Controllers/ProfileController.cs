@@ -1,8 +1,13 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using BrainBurst.Application.Interfaces.Services;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
+using System;
 
 namespace BrainBurst.WebUI.Controllers
 {
-    // Модель для списку пройдених тестів (Архів)
     public class ArchiveTestViewModel
     {
         public int TestId { get; set; }
@@ -11,7 +16,6 @@ namespace BrainBurst.WebUI.Controllers
         public string DateTaken { get; set; }
     }
 
-    // Модель для детального розбору одного пройденого тесту
     public class ArchiveDetailViewModel
     {
         public string QuestionText { get; set; }
@@ -22,60 +26,68 @@ namespace BrainBurst.WebUI.Controllers
 
     public class ProfileController : Controller
     {
-        // Відкриває головну сторінку профілю
+        private readonly IArchiveService _archiveService;
+
+        public ProfileController(IArchiveService archiveService)
+        {
+            _archiveService = archiveService;
+        }
+
         public IActionResult Index()
         {
             return View();
         }
 
-        // Відкриває сторінку редагування
         [HttpGet]
         public IActionResult Edit()
         {
-            // Передаємо поточне ім'я користувача для відображення в полі
             ViewBag.CurrentUsername = "нікнейм";
             return View();
         }
 
-        // Зберігає зміни і повертає назад у профіль
         [HttpPost]
         public IActionResult Edit(string username)
         {
-            // ПІЗНІШЕ: тут буде код оновлення імені (та фото) в базі даних
             return RedirectToAction("Index");
         }
 
-        // НОВЕ: Метод, що відкриває список архіву
-        public IActionResult Archive()
+        // РЕАЛЬНИЙ АРХІВ
+        public async Task<IActionResult> Archive()
         {
-            // Заглушка: список пройдених тестів
-            var archive = new List<ArchiveTestViewModel>
+            int userId = 1; // Заглушка
+            var resultsDto = await _archiveService.GetArchiveAsync(userId, CancellationToken.None);
+
+            var archive = resultsDto.Select(dto => new ArchiveTestViewModel
             {
-                new ArchiveTestViewModel { TestId = 1042, Title = "Основи C#", Percent = 100, DateTaken = "28/04/2026" },
-                new ArchiveTestViewModel { TestId = 953, Title = "Дискретна математика", Percent = 66, DateTaken = "25/04/2026" },
-                new ArchiveTestViewModel { TestId = 712, Title = "Психологія", Percent = 85, DateTaken = "15/03/2026" }
-            };
+                TestId = dto.TestResultId,
+                Title = dto.Title,
+                Percent = (int)Math.Round(dto.Score),
+                DateTaken = dto.TestDate.ToString("dd/MM/yyyy")
+            }).ToList();
 
             return View(archive);
         }
 
-        // НОВЕ: Метод, що відкриває результати конкретного тесту з архіву
-        public IActionResult ArchiveDetails(int id)
+        // РЕАЛЬНІ ДЕТАЛІ ТЕСТУ
+        public async Task<IActionResult> ArchiveDetails(int id)
         {
-            // Заглушка: деталі конкретного тесту
-            ViewBag.TestTitle = "Дискретна математика (Архів)";
-            ViewBag.ScorePoints = "2 / 3";
-            ViewBag.ScorePercent = "66%";
+            var detailsDto = await _archiveService.GetArchiveDetailsAsync(id, CancellationToken.None);
 
-            var details = new List<ArchiveDetailViewModel>
+            if (detailsDto == null) return NotFound();
+
+            ViewBag.TestTitle = detailsDto.TestTitle;
+            ViewBag.ScorePoints = $"{detailsDto.PointsEarned} / {detailsDto.MaxPoints}";
+            ViewBag.ScorePercent = $"{Math.Round(detailsDto.ScorePercent)}%";
+
+            var details = detailsDto.Questions.Select(q => new ArchiveDetailViewModel
             {
-                new ArchiveDetailViewModel { QuestionText = "Що таке граф?", CorrectAnswer = "Множина вершин і ребер", UserAnswer = "Множина вершин і ребер", IsCorrect = true },
-                new ArchiveDetailViewModel { QuestionText = "Що таке дерево в теорії графів?", CorrectAnswer = "Зв'язний граф без циклів", UserAnswer = "Просто граф", IsCorrect = false },
-                new ArchiveDetailViewModel { QuestionText = "Скільки ребер у повному графі з 4 вершин?", CorrectAnswer = "6", UserAnswer = "6", IsCorrect = true }
-            };
+                QuestionText = q.QuestionText,
+                CorrectAnswer = q.CorrectAnswer,
+                UserAnswer = q.UserAnswer,
+                IsCorrect = q.IsCorrect
+            }).ToList();
 
             return View(details);
         }
-
     }
 }

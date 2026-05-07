@@ -15,15 +15,16 @@ public class TestRepository : ITestRepository
 
     public async Task<Test> CreateFromFlashcardsAsync(int creatorId, IEnumerable<int> flashcardIds, CancellationToken ct)
     {
-        // Створюємо запис про новий тест
+        // Додав Title, щоб база даних не сварилася на пусте поле
         var test = new Test
         {
-            CreatorId = creatorId
+            CreatorId = creatorId,
+            Title = "Новий тест"
         };
 
         await _context.Tests.AddAsync(test, ct);
         await _context.SaveChangesAsync(ct);
-        
+
         return test;
     }
 
@@ -31,6 +32,10 @@ public class TestRepository : ITestRepository
     {
         return await _context.Tests
             .Include(t => t.Creator)
+            // === ДОДАНО: Щоб дістати колоду і всі її питання ===
+            .Include(t => t.Tag)
+                .ThenInclude(tag => tag.Flashcards)
+            // ===================================================
             .FirstOrDefaultAsync(t => t.TestId == id, ct);
     }
 }

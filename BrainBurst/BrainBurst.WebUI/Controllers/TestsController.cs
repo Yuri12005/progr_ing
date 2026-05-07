@@ -2,14 +2,16 @@
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Threading;
 using Microsoft.EntityFrameworkCore;
-using BrainBurst.Infrastructure.Persistence; // Підключаємо контекст бази
+using BrainBurst.Infrastructure.Persistence;
 using BrainBurst.Domain.Entities;
+using BrainBurst.Application.Interfaces.Services; // Підключили сервіси
 using System.IO;
 
 namespace BrainBurst.WebUI.Controllers
 {
-    // Тимчасова модель для відображення тесту
     public class TestViewModel
     {
         public int Id { get; set; }
@@ -25,7 +27,6 @@ namespace BrainBurst.WebUI.Controllers
         public string CorrectAnswer { get; set; }
     }
 
-    // Класи-кур'єри для отримання даних з JavaScript
     public class TestSubmissionData
     {
         public int TestId { get; set; }
@@ -37,30 +38,29 @@ namespace BrainBurst.WebUI.Controllers
     {
         public int FlashcardId { get; set; }
         public bool IsCorrect { get; set; }
-        public string UserInput { get; set; } // Поле для тексту
+        public string UserInput { get; set; }
     }
-
 
     public class TestsController : Controller
     {
-        // Змінна для нашої бази даних
         private readonly ApplicationDbContext _context;
+        private readonly ITestService _testService; // ДОДАЛИ СЕРВІС
 
-        // Конструктор, через який система автоматично передає підключення до БД
-        public TestsController(ApplicationDbContext context)
+        // Оновлений конструктор приймає і контекст, і сервіс
+        public TestsController(ApplicationDbContext context, ITestService testService)
         {
             _context = context;
+            _testService = testService;
         }
 
         public IActionResult Index()
         {
-            // Беремо всі тести з реальної бази даних і перетворюємо їх у TestViewModel
             var tests = _context.Tests
                 .Select(t => new TestViewModel
                 {
                     Id = t.TestId,
                     Title = t.Title,
-                    QuestionCount = 0, // Поки ставимо 0, бо зв'язку з питаннями ще немає
+                    QuestionCount = 0,
                     IsRecent = false
                 })
                 .ToList();
@@ -68,10 +68,8 @@ namespace BrainBurst.WebUI.Controllers
             return View(tests);
         }
 
-        // 2. ПРОХОДЖЕННЯ ТЕСТУ
         public IActionResult Take(int id)
         {
-            // 1. Шукаємо тест за ID, включаючи пов'язаний Тег та всі його Картки
             var test = _context.Tests
                 .Include(t => t.Tag)
                     .ThenInclude(tag => tag.Flashcards)
@@ -81,13 +79,11 @@ namespace BrainBurst.WebUI.Controllers
 
             ViewBag.TestTitle = test.Title;
 
-            // 2. Якщо у теста немає прив'язаної колоди (тегу)
             if (test.Tag == null)
             {
                 return View(new List<TestQuestionViewModel>());
             }
 
-            // 3. Мапимо реальні картки з бази у твою TestQuestionViewModel
             var questions = test.Tag.Flashcards.Select(f => new TestQuestionViewModel
             {
                 Id = f.FlashcardId,
@@ -98,11 +94,9 @@ namespace BrainBurst.WebUI.Controllers
             return View(questions);
         }
 
-        // МЕТОД 1: Відкриває сторінку створення тесту
         [HttpGet]
         public IActionResult Create()
         {
-            // Беремо РЕАЛЬНІ колоди (Теги) з бази даних для випадаючого списку
             var availableDecks = _context.Tags
                 .Include(t => t.Flashcards)
                 .Select(t => new TestViewModel
@@ -116,18 +110,13 @@ namespace BrainBurst.WebUI.Controllers
             return View(availableDecks);
         }
 
-        // МЕТОД 2: Приймає дані після натискання "Створити тест"
         [HttpPost]
         public IActionResult Create(string testName, string generationType, int? selectedDeckId, IFormFile? uploadedFile)
         {
-            if (string.IsNullOrEmpty(testName))
-            {
-                return RedirectToAction("Index");
-            }
+            if (string.IsNullOrEmpty(testName)) return RedirectToAction("Index");
 
             var currentUser = _context.Users.FirstOrDefault();
             int creatorId = currentUser != null ? currentUser.UserId : 1;
-
             int? finalTagId = null;
 
             if (generationType == "deck" && selectedDeckId.HasValue)
@@ -166,40 +155,32 @@ namespace BrainBurst.WebUI.Controllers
             return RedirectToAction("Index");
         }
 
-        // МЕТОД 3: Збереження результатів тесту (тепер він правильно всередині класу!)
+        // ОСЬ ВІН! Метод, який тепер використовує правильний ITestService
         [HttpPost]
-        public IActionResult SubmitResult([FromBody] TestSubmissionData data)
+        public async Task<IActionResult> SubmitResult([FromBody] TestSubmissionData data)
         {
             var currentUser = _context.Users.FirstOrDefault();
             int userId = currentUser != null ? currentUser.UserId : 1;
 
-            var questionResultsList = new List<QuestionResult>();
-
+            // Перетворюємо твої відповіді у формат (int, string), який вимагає напарник
+            var answersForService = new List<(int flashcardId, string? userInput)>();
             if (data.Answers != null)
             {
                 foreach (var ans in data.Answers)
                 {
-                    questionResultsList.Add(new QuestionResult
-                    {
-                        FlashcardId = ans.FlashcardId,
-                        IsCorrect = ans.IsCorrect,
-                        UserInput = ans.UserInput ?? ""
-                    });
+                    answersForService.Add((ans.FlashcardId, ans.UserInput));
                 }
             }
 
-            var testResult = new TestResult
-            {
-                TestId = data.TestId,
-                UserId = userId,
-                CorrectAnswersPercent = data.ScorePercent,
-                QuestionResults = questionResultsList
-            };
+            // Викликаємо сервіс!
+            var resultDto = await _testService.SubmitAsync(
+                data.TestId,
+                userId,
+                answersForService,
+                CancellationToken.None
+            );
 
-            _context.TestResults.Add(testResult);
-            _context.SaveChanges();
-
-            return Json(new { success = true });
+            return Json(new { success = true, score = resultDto.CorrectAnswersPercent });
         }
-    } // <--- ОДНА закриваюча дужка для TestsController
-} // <--- ОДНА закриваюча дужка для namespace
+    }
+}

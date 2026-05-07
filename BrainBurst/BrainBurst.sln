@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BrainBurst.Infrastructure",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BrainBurst.WebUI", "BrainBurst.WebUI\BrainBurst.WebUI.csproj", "{A6B5A785-6C14-45C9-A103-CBE027401EEA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BrainBurst.Tests", "BrainBurst.Tests\BrainBurst.Tests.csproj", "{A5045A97-7867-4337-A762-EAC51648635C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{A6B5A785-6C14-45C9-A103-CBE027401EEA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A6B5A785-6C14-45C9-A103-CBE027401EEA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A6B5A785-6C14-45C9-A103-CBE027401EEA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A5045A97-7867-4337-A762-EAC51648635C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5045A97-7867-4337-A762-EAC51648635C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5045A97-7867-4337-A762-EAC51648635C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5045A97-7867-4337-A762-EAC51648635C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
