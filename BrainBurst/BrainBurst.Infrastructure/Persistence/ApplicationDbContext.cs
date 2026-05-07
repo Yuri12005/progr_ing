@@ -1,50 +1,47 @@
 using BrainBurst.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace BrainBurst.Infrastructure.Persistence;
 
-public class ApplicationDbContext : DbContext
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<int>, int>
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options)
     {
     }
 
-    // Таблиці нашої бази даних
-    public DbSet<User> Users { get; set; } = null!;
     public DbSet<Flashcard> Flashcards { get; set; } = null!;
     public DbSet<Test> Tests { get; set; } = null!;
     public DbSet<Tag> Tags { get; set; } = null!;
     public DbSet<TestResult> TestResults { get; set; } = null!;
     public DbSet<QuestionResult> QuestionResults { get; set; } = null!;
 
-    // Налаштування правил таблиць (замість старих [Key], [MaxLength] і т.д.)
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // 1. Спочатку викликаємо базовий метод Identity
         base.OnModelCreating(modelBuilder);
 
-        // Налаштування User
-        modelBuilder.Entity<User>(entity =>
+        // 2. Налаштування нашої таблиці Users (колишній User)
+        modelBuilder.Entity<ApplicationUser>(entity =>
         {
-            entity.HasKey(e => e.UserId);
-            entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.PasswordHash).IsRequired().HasMaxLength(255);
+            entity.ToTable("Users");
+            // Identity використовує Id, але ми можемо налаштувати довжину полів
             entity.Property(e => e.FullName).HasMaxLength(100);
             entity.Property(e => e.Rank).HasMaxLength(20);
         });
 
-        // Налаштування Flashcard
+        // 3. Твоя логіка Flashcard
         modelBuilder.Entity<Flashcard>(entity =>
         {
             entity.HasKey(e => e.FlashcardId);
-            
-            // Зв'язок: Один користувач -> Багато карток
             entity.HasOne(e => e.Creator)
                   .WithMany(u => u.Flashcards)
                   .HasForeignKey(e => e.CreatorId)
-                  .OnDelete(DeleteBehavior.Restrict); // Забороняємо каскадне видалення користувача при видаленні картки
+                  .OnDelete(DeleteBehavior.Restrict);
         });
 
-        // Налаштування Tag (та зв'язок Many-to-Many з Flashcards)
+        // 4. Твоя логіка Tag (Many-to-Many)
         modelBuilder.Entity<Tag>(entity =>
         {
             entity.HasKey(e => e.TagId);
@@ -55,13 +52,12 @@ public class ApplicationDbContext : DbContext
                   .HasForeignKey(e => e.CreatorId)
                   .OnDelete(DeleteBehavior.SetNull);
 
-            // Багато-до-багатьох: Картка <-> Тег
             entity.HasMany(e => e.Flashcards)
                   .WithMany(f => f.Tags)
-                  .UsingEntity(j => j.ToTable("FlashcardTags")); // EF Core автоматично створить проміжну таблицю!
+                  .UsingEntity(j => j.ToTable("FlashcardTags"));
         });
 
-        // Налаштування Test
+        // 5. Твоя логіка Test
         modelBuilder.Entity<Test>(entity =>
         {
             entity.HasKey(e => e.TestId);
@@ -71,11 +67,10 @@ public class ApplicationDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Налаштування TestResult
+        // 6. Твоя логіка TestResult
         modelBuilder.Entity<TestResult>(entity =>
         {
             entity.HasKey(e => e.TestResultId);
-            // Тут ми переносимо твоє старе правило [Column(TypeName = "numeric(5,2)")]
             entity.Property(e => e.CorrectAnswersPercent).HasColumnType("numeric(5,2)");
             
             entity.HasOne(e => e.Test)
@@ -89,11 +84,10 @@ public class ApplicationDbContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Налаштування QuestionResult
+        // 7. Твоя логіка QuestionResult
         modelBuilder.Entity<QuestionResult>(entity =>
         {
             entity.HasKey(e => e.QuestionResultId);
-            
             entity.HasOne(e => e.TestResult)
                   .WithMany(tr => tr.QuestionResults)
                   .HasForeignKey(e => e.TestResultId)
@@ -104,5 +98,9 @@ public class ApplicationDbContext : DbContext
                   .HasForeignKey(e => e.FlashcardId)
                   .OnDelete(DeleteBehavior.Restrict);
         });
+
+        // Перейменування інших системних таблиць Identity для краси
+        modelBuilder.Entity<IdentityRole<int>>().ToTable("Roles");
+        modelBuilder.Entity<IdentityUserRole<int>>().ToTable("UserRoles");
     }
 }

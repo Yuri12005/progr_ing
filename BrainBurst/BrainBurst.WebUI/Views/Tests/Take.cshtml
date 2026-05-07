@@ -224,6 +224,9 @@
     // Отримуємо дані з C#
     const questions = @Html.Raw(Json.Serialize(Model));
 
+    // Отримуємо ID тесту з поточного URL (наприклад, /Tests/Take/5 -> витягне 5)
+    const currentTestId = window.location.pathname.split('/').pop();
+
     let currentIndex = 0;
     let userAnswers = []; // Зберігатимемо всі відповіді користувача
 
@@ -234,8 +237,18 @@
     const testZone = document.getElementById('testZone');
     const resultZone = document.getElementById('resultZone');
 
+    // Якщо раптом у тесті 0 питань
+    if (!questions || questions.length === 0) {
+        qText.innerText = "У цьому тесті поки немає питань.";
+        qCounter.innerText = "0 / 0";
+        document.querySelector('.btn-next').style.display = 'none';
+        userInput.style.display = 'none';
+    }
+
     // Показує поточне питання
     function renderQuestion() {
+        if (!questions || questions.length === 0) return;
+
         if (currentIndex >= questions.length) {
             showResults();
             return;
@@ -277,7 +290,7 @@
                 userInput: userAnswers[i]
             });
 
-            // Твій старий код для малювання карток залишається без змін:
+            // Малювання карток
             if (isCorrect) {
                 correctCount++;
                 reviewHtml += `
@@ -305,16 +318,16 @@
         document.getElementById('scorePercent').innerText = percent + "%";
         document.getElementById('reviewList').innerHTML = reviewHtml;
 
-        // ВІДПРАВКА ДАНИХ НА СЕРВЕР (тепер з деталями!)
+        // ВІДПРАВКА ДАНИХ НА СЕРВЕР
         fetch('/Tests/SubmitResult', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                testId: parseInt(currentTestId),
+                testId: parseInt(currentTestId) || 0,
                 scorePercent: percent,
-                answers: detailedAnswers // <--- Ось тут ми передаємо список усіх відповідей у БД
+                answers: detailedAnswers 
             })
         })
         .then(response => response.json())
@@ -324,7 +337,7 @@
         .catch(error => {
             console.error("Помилка при збереженні:", error);
         });
-    }}
+    }
 
     // Підтримка клавіші Enter
     userInput.addEventListener("keypress", function(event) {
@@ -335,5 +348,7 @@
     });
 
     // Запуск першого питання
-    renderQuestion();
+    if (questions && questions.length > 0) {
+        renderQuestion();
+    }
 </script>

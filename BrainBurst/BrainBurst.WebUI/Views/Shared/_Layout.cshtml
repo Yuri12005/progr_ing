@@ -1,10 +1,16 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Identity
+@using BrainBurst.Domain.Entities
+@inject SignInManager<ApplicationUser> SignInManager
+
+<!DOCTYPE html>
 <html lang="uk">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - BrainBurst</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    
     <style>
         body {
             margin: 0;
@@ -15,7 +21,6 @@
             background-color: white;
         }
 
-        /* Червоний сайдбар зліва */
         .sidebar {
             width: 80px;
             background-color: #FF3B30;
@@ -30,12 +35,14 @@
             width: 50px;
             margin-bottom: 40px;
             cursor: pointer;
+            transition: transform 0.2s;
         }
+        .sidebar-logo:hover { transform: scale(1.05); }
 
         .nav-icons {
             display: flex;
             flex-direction: column;
-            gap: 30px;
+            gap: 25px;
             align-items: center;
             width: 100%;
         }
@@ -45,26 +52,41 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            opacity: 0.7;
-            transition: opacity 0.2s;
+            opacity: 0.8;
+            transition: all 0.2s;
+            color: white;
         }
 
-            .nav-link:hover {
-                opacity: 1;
-            }
+        .nav-link:hover {
+            opacity: 1;
+            transform: scale(1.1);
+            color: white;
+        }
 
-        /* Стиль для самих картинок-іконок */
         .nav-icon-img {
-            width: 35px; /* Розмір іконки. Можеш збільшити чи зменшити за потреби */
+            width: 32px;
             height: auto;
         }
 
-        .settings-link {
+        .bottom-icons {
             margin-top: auto;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
         }
 
-        /* Основний контент справа */
+        .logout-button {
+            background: none;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+        }
+        .logout-button:hover { opacity: 1; }
+
         .main-container {
             flex-grow: 1;
             padding: 40px 60px;
@@ -75,32 +97,70 @@
 <body>
 
     <nav class="sidebar">
-        <a href="/Profile" class="sidebar-logo">
-            <img src="/images/logo-black.png" style="width: 100%;" alt="Logo">
-        </a>
+        @* ЛОГОТИП: Веде на Профіль для залогінених, на Головну для гостей *@
+        @if (SignInManager.IsSignedIn(User))
+        {
+            <a asp-controller="Profile" asp-action="Index" class="sidebar-logo" title="Мій профіль">
+                <img src="/images/logo-black.png" style="width: 100%;" alt="Logo">
+            </a>
+        }
+        else
+        {
+            <a asp-controller="Home" asp-action="Index" class="sidebar-logo">
+                <img src="/images/logo-black.png" style="width: 100%;" alt="Logo">
+            </a>
+        }
 
         <div class="nav-icons">
-            <a href="/Cards" class="nav-link" title="Мої картки">
+            <a asp-controller="Cards" asp-action="Index" class="nav-link" title="Мої картки">
                 <img src="/images/cards.png" class="nav-icon-img" alt="Картки">
             </a>
 
-            <a href="/Tests" class="nav-link" title="Тести">
+            <a asp-controller="Tests" asp-action="Index" class="nav-link" title="Тести">
                 <img src="/images/tests.png" class="nav-icon-img" alt="Тести">
             </a>
 
-            <a href="/Rating" class="nav-link" title="Рейтинг">
+            <a asp-controller="Rating" asp-action="Index" class="nav-link" title="Рейтинг">
                 <img src="/images/achievements.png" class="nav-icon-img" alt="Рейтинг">
             </a>
         </div>
 
-        <a href="/Settings" class="nav-link settings-link" title="Налаштування">
-            <img src="/images/settings.png" class="nav-icon-img" alt="Налаштування">
-        </a>
+        <div class="bottom-icons">
+            @if (SignInManager.IsSignedIn(User))
+            {
+                <a asp-controller="Settings" asp-action="Index" class="nav-link" title="Налаштування">
+                    <img src="/images/settings.png" class="nav-icon-img" alt="Налаштування">
+                </a>
+
+                @* ФОРМА ВИХОДУ: Обов'язкова для безпечного Logout в Identity *@
+                <form asp-controller="Account" asp-action="Logout" method="post" id="logoutForm" style="display:none;">
+                    @Html.AntiForgeryToken()
+                </form>
+
+                <button type="button" class="logout-button" title="Вийти" onclick="document.getElementById('logoutForm').submit();">
+                    <img src="/images/logo.png" class="nav-icon-img" style="filter: brightness(0) invert(1);" alt="Logout">
+                </button>
+            }
+            else
+            {
+                <a asp-controller="Account" asp-action="Login" class="nav-link" title="Увійти">
+                    <span style="font-weight: 800; font-size: 1.2rem;">IN</span>
+                </a>
+                <a asp-controller="Account" asp-action="Register" class="nav-link" title="Реєстрація">
+                    <span style="font-weight: 800; font-size: 1.2rem;">REG</span>
+                </a>
+            }
+        </div>
     </nav>
 
     <div class="main-container">
         @RenderBody()
     </div>
 
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

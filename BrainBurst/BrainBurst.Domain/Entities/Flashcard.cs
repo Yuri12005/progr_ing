@@ -9,7 +9,10 @@ public class Flashcard
     public string Question { get; set; } = null!;
     public string Answer { get; set; } = null!;
     public int CreatorId { get; set; }
-    public User Creator { get; set; } = null!;
+    
+    // ОСЬ ТУТ МИ ЗМІНИЛИ User НА ApplicationUser
+    public ApplicationUser Creator { get; set; } = null!; 
+    
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     public ICollection<Tag> Tags { get; set; } = new HashSet<Tag>();

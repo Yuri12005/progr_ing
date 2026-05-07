@@ -15,17 +15,25 @@ public class FlashcardRepository : IFlashcardRepository
 
     public async Task<Flashcard> AddAsync(Flashcard f, IEnumerable<string> tags, CancellationToken ct)
     {
-        // Додаємо або знаходимо існуючі теги
-        foreach (var tagName in tags)
+        // Захист від NullReferenceException, якщо колекція ще не ініціалізована
+        f.Tags ??= new List<Tag>();
+
+        if (tags != null)
         {
-            var existingTag = await _context.Tags.FirstOrDefaultAsync(t => t.Name == tagName, ct);
-            if (existingTag != null)
+            foreach (var tagName in tags)
             {
-                f.Tags.Add(existingTag);
-            }
-            else
-            {
-                f.Tags.Add(new Tag { Name = tagName, CreatorId = f.CreatorId });
+                var existingTag = await _context.Tags.FirstOrDefaultAsync(t => t.Name == tagName, ct);
+                if (existingTag != null)
+                {
+                    f.Tags.Add(existingTag);
+                }
+                else
+                {
+                    // Явно додаємо новий тег у контекст бази даних перед прив'язкою
+                    var newTag = new Tag { Name = tagName, CreatorId = f.CreatorId };
+                    _context.Tags.Add(newTag); 
+                    f.Tags.Add(newTag);
+                }
             }
         }
 
@@ -79,11 +87,24 @@ public class FlashcardRepository : IFlashcardRepository
 
             // Очищаємо старі теги та додаємо нові
             existingFlashcard.Tags.Clear();
-            foreach (var tagName in tags)
+            
+            if (tags != null)
             {
-                var tag = await _context.Tags.FirstOrDefaultAsync(t => t.Name == tagName, ct) 
-                          ?? new Tag { Name = tagName, CreatorId = f.CreatorId };
-                existingFlashcard.Tags.Add(tag);
+                foreach (var tagName in tags)
+                {
+                    var existingTag = await _context.Tags.FirstOrDefaultAsync(t => t.Name == tagName, ct);
+                    
+                    if (existingTag != null)
+                    {
+                        existingFlashcard.Tags.Add(existingTag);
+                    }
+                    else
+                    {
+                        var newTag = new Tag { Name = tagName, CreatorId = f.CreatorId };
+                        _context.Tags.Add(newTag);
+                        existingFlashcard.Tags.Add(newTag);
+                    }
+                }
             }
 
             _context.Flashcards.Update(existingFlashcard);

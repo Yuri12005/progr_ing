@@ -1,5 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using System.Collections.Generic;
+using System.Linq;
+using System.Security.Claims;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using BrainBurst.Infrastructure.Persistence;
 
 namespace BrainBurst.WebUI.Controllers
 {
@@ -13,27 +19,50 @@ namespace BrainBurst.WebUI.Controllers
         public bool IsCurrentUser { get; set; } // Щоб виділити рядок кольором
     }
 
+    [Authorize] // Тільки для залогінених користувачів
     public class RatingController : Controller
     {
-        public IActionResult Index()
-        {
-            // Генеруємо 10 лідерів (заглушка до підключення БД)
-            var ratings = new List<UserRatingViewModel>
-            {
-                new UserRatingViewModel { Position = 1, Username = "Олександр_99", Points = 1250, RankName = "Професіонал", IsCurrentUser = false },
-                new UserRatingViewModel { Position = 2, Username = "Марія_К", Points = 1100, RankName = "Професіонал", IsCurrentUser = false },
-                new UserRatingViewModel { Position = 3, Username = "Ivan_Student", Points = 950, RankName = "Професіонал", IsCurrentUser = false },
-                new UserRatingViewModel { Position = 4, Username = "Anna_Intech", Points = 800, RankName = "Любитель", IsCurrentUser = false },
-                
-                // Це "Ти" - виділений користувач
-                new UserRatingViewModel { Position = 5, Username = "Твій_Нікнейм", Points = 750, RankName = "Любитель", IsCurrentUser = true },
+        private readonly ApplicationDbContext _context;
 
-                new UserRatingViewModel { Position = 6, Username = "Petro_Z", Points = 600, RankName = "Любитель", IsCurrentUser = false },
-                new UserRatingViewModel { Position = 7, Username = "Олена_С", Points = 500, RankName = "Любитель", IsCurrentUser = false },
-                new UserRatingViewModel { Position = 8, Username = "Максим_123", Points = 400, RankName = "Любитель", IsCurrentUser = false },
-                new UserRatingViewModel { Position = 9, Username = "Yulia_Dev", Points = 250, RankName = "Початківець", IsCurrentUser = false },
-                new UserRatingViewModel { Position = 10, Username = "Дмитро_Т", Points = 100, RankName = "Початківець", IsCurrentUser = false }
-            };
+        // Підключаємо базу даних
+        public RatingController(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            // Отримуємо ID поточного користувача
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            int currentUserId = int.Parse(userIdString!);
+
+            // Витягуємо всіх користувачів з бази, сортуємо за балами (за спаданням)
+            // Примітка: переконайся, що у твоєму класі ApplicationUser є властивість Points!
+            var allUsers = await _context.Users
+                .OrderByDescending(u => u.Points) 
+                .ToListAsync();
+
+            var ratings = new List<UserRatingViewModel>();
+            int currentPosition = 1;
+
+            foreach (var user in allUsers)
+            {
+                ratings.Add(new UserRatingViewModel
+                {
+                    Position = currentPosition,
+                    // Якщо в юзера заповнене FullName — показуємо його, якщо ні — беремо логін (UserName)
+                    Username = string.IsNullOrEmpty(user.FullName) ? user.UserName : user.FullName,
+                    Points = user.Points, 
+                    // Якщо ранг ще не призначений, ставимо стандартний
+                    RankName = string.IsNullOrEmpty(user.Rank) ? "Початківець" : user.Rank,
+                    IsCurrentUser = user.Id == currentUserId
+                });
+                
+                currentPosition++;
+            }
+
+            // Якщо хочеш показувати лише Топ-50 гравців, розкоментуй цей рядок:
+            // ratings = ratings.Take(50).ToList();
 
             return View(ratings);
         }

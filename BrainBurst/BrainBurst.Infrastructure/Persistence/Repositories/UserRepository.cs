@@ -13,45 +13,30 @@ public class UserRepository : IUserRepository
         _context = context;
     }
 
-    public async Task<User> AddAsync(User user, CancellationToken ct)
+    public async Task<ApplicationUser> AddAsync(ApplicationUser user, CancellationToken ct)
     {
-        await _context.Users.AddAsync(user, ct);
+        _context.Users.Add(user);
         await _context.SaveChangesAsync(ct);
         return user;
     }
 
-    public async Task DeleteAsync(int id, CancellationToken ct)
+    public async Task<ApplicationUser?> GetByIdAsync(int id, CancellationToken ct)
     {
-        var user = await _context.Users.FindAsync(new object[] { id }, ct);
-        if (user != null)
-        {
-            _context.Users.Remove(user);
-            await _context.SaveChangesAsync(ct);
-        }
+        // Зверни увагу: тепер ми використовуємо u.Id замість u.UserId
+        return await _context.Users.FirstOrDefaultAsync(u => u.Id == id, ct);
     }
 
-    public async Task<User?> GetByEmailAsync(string email, CancellationToken ct)
+    public async Task<ApplicationUser?> GetByEmailAsync(string email, CancellationToken ct)
     {
-        return await _context.Users
-            .FirstOrDefaultAsync(u => u.Email == email, ct);
+        return await _context.Users.FirstOrDefaultAsync(u => u.Email == email, ct);
     }
 
-    public async Task<User> GetByIdAsync(int id, CancellationToken ct)
+    public async Task<IReadOnlyList<ApplicationUser>> GetAllAsync(CancellationToken ct)
     {
-        var user = await _context.Users.FindAsync(new object[] { id }, ct);
-        if (user == null) throw new Exception("User not found");
-        return user;
+        return await _context.Users.ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<User>> GetTopAsync(int take, CancellationToken ct)
-    {
-        return await _context.Users
-            .OrderByDescending(u => u.Points)
-            .Take(take)
-            .ToListAsync(ct);
-    }
-
-    public async Task UpdateAsync(User user, CancellationToken ct)
+    public async Task UpdateAsync(ApplicationUser user, CancellationToken ct)
     {
         _context.Users.Update(user);
         await _context.SaveChangesAsync(ct);

@@ -16,7 +16,7 @@ public class Test
 
 
     public int CreatorId { get; set; }
-    public User Creator { get; set; } = null!;
+    public ApplicationUser Creator { get; set; } = null!;
 
     public ICollection<TestResult> TestResults { get; set; } = new List<TestResult>();
 }

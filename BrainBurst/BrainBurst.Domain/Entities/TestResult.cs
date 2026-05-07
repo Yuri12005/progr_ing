@@ -9,7 +9,7 @@ public class TestResult
     public int TestId { get; set; }
     public Test Test { get; set; } = null!;
     public int UserId { get; set; }
-    public User User { get; set; } = null!;
+    public ApplicationUser User { get; set; } = null!;
     public decimal CorrectAnswersPercent { get; set; }
     public int Points { get; set; }
     public DateTime TestDate { get; set; } = DateTime.UtcNow;

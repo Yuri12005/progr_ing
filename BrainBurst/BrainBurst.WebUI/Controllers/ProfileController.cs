@@ -1,7 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using BrainBurst.Application.Interfaces.Services;
+using BrainBurst.Domain.Entities;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
@@ -24,37 +28,70 @@ namespace BrainBurst.WebUI.Controllers
         public bool IsCorrect { get; set; }
     }
 
+    [Authorize] // Закриваємо контролер для гостей
     public class ProfileController : Controller
     {
         private readonly IArchiveService _archiveService;
+        private readonly UserManager<ApplicationUser> _userManager;
 
-        public ProfileController(IArchiveService archiveService)
+        // Підключаємо UserManager для роботи з профілем
+        public ProfileController(IArchiveService archiveService, UserManager<ApplicationUser> userManager)
         {
             _archiveService = archiveService;
+            _userManager = userManager;
         }
 
-        public IActionResult Index()
+        // Допоміжний метод для ID
+        private int GetCurrentUserId()
         {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.Parse(userIdString!);
+        }
+
+        public async Task<IActionResult> Index()
+        {
+            // Беремо поточного юзера, щоб показати його стату на сторінці
+            var user = await _userManager.GetUserAsync(User);
+            if (user != null)
+            {
+                ViewBag.Username = string.IsNullOrEmpty(user.FullName) ? user.UserName : user.FullName;
+                ViewBag.Points = user.Points;
+                ViewBag.Rank = string.IsNullOrEmpty(user.Rank) ? "Початківець" : user.Rank;
+            }
+
             return View();
         }
 
         [HttpGet]
-        public IActionResult Edit()
+        public async Task<IActionResult> Edit()
         {
-            ViewBag.CurrentUsername = "нікнейм";
+            var user = await _userManager.GetUserAsync(User);
+            // Підставляємо реальне ім'я в поле редагування
+            ViewBag.CurrentUsername = string.IsNullOrEmpty(user?.FullName) ? user?.UserName : user?.FullName;
+            
             return View();
         }
 
         [HttpPost]
-        public IActionResult Edit(string username)
+        public async Task<IActionResult> Edit(string username)
         {
+            if (!string.IsNullOrWhiteSpace(username))
+            {
+                var user = await _userManager.GetUserAsync(User);
+                if (user != null)
+                {
+                    // Зберігаємо нове ім'я користувача
+                    user.FullName = username;
+                    await _userManager.UpdateAsync(user);
+                }
+            }
             return RedirectToAction("Index");
         }
 
         // РЕАЛЬНИЙ АРХІВ
         public async Task<IActionResult> Archive()
         {
-            int userId = 1; // Заглушка
+            int userId = GetCurrentUserId(); // Заглушку знищено!
             var resultsDto = await _archiveService.GetArchiveAsync(userId, CancellationToken.None);
 
             var archive = resultsDto.Select(dto => new ArchiveTestViewModel

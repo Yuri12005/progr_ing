@@ -3,6 +3,7 @@ using System;
 using BrainBurst.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace BrainBurst.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260507204717_InitialIdentity")]
+    partial class InitialIdentity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -127,9 +130,14 @@ namespace BrainBurst.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("FlashcardId");
 
                     b.HasIndex("CreatorId");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("Flashcards");
                 });
@@ -172,6 +180,9 @@ namespace BrainBurst.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TagId"));
 
+                    b.Property<int?>("ApplicationUserId")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("CreatorId")
                         .HasColumnType("integer");
 
@@ -181,6 +192,8 @@ namespace BrainBurst.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.HasKey("TagId");
+
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("CreatorId");
 
@@ -195,6 +208,9 @@ namespace BrainBurst.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TestId"));
 
+                    b.Property<int?>("ApplicationUserId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("CreatorId")
                         .HasColumnType("integer");
 
@@ -206,6 +222,8 @@ namespace BrainBurst.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.HasKey("TestId");
+
+                    b.HasIndex("ApplicationUserId");
 
                     b.HasIndex("CreatorId");
 
@@ -221,6 +239,9 @@ namespace BrainBurst.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("TestResultId"));
+
+                    b.Property<int?>("ApplicationUserId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("CorrectAnswersPercent")
                         .HasColumnType("numeric(5,2)");
@@ -239,11 +260,47 @@ namespace BrainBurst.Infrastructure.Migrations
 
                     b.HasKey("TestResultId");
 
+                    b.HasIndex("ApplicationUserId");
+
                     b.HasIndex("TestId");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("TestResults");
+                });
+
+            modelBuilder.Entity("BrainBurst.Domain.Entities.User", b =>
+                {
+                    b.Property<int>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("UserId"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FullName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Rank")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("UserId");
+
+                    b.ToTable("User");
                 });
 
             modelBuilder.Entity("FlashcardTag", b =>
@@ -401,6 +458,10 @@ namespace BrainBurst.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("BrainBurst.Domain.Entities.User", null)
+                        .WithMany("Flashcards")
+                        .HasForeignKey("UserId");
+
                     b.Navigation("Creator");
                 });
 
@@ -425,7 +486,11 @@ namespace BrainBurst.Infrastructure.Migrations
 
             modelBuilder.Entity("BrainBurst.Domain.Entities.Tag", b =>
                 {
-                    b.HasOne("BrainBurst.Domain.Entities.ApplicationUser", "Creator")
+                    b.HasOne("BrainBurst.Domain.Entities.ApplicationUser", null)
+                        .WithMany("Tags")
+                        .HasForeignKey("ApplicationUserId");
+
+                    b.HasOne("BrainBurst.Domain.Entities.User", "Creator")
                         .WithMany("Tags")
                         .HasForeignKey("CreatorId")
                         .OnDelete(DeleteBehavior.SetNull);
@@ -435,7 +500,11 @@ namespace BrainBurst.Infrastructure.Migrations
 
             modelBuilder.Entity("BrainBurst.Domain.Entities.Test", b =>
                 {
-                    b.HasOne("BrainBurst.Domain.Entities.ApplicationUser", "Creator")
+                    b.HasOne("BrainBurst.Domain.Entities.ApplicationUser", null)
+                        .WithMany("Tests")
+                        .HasForeignKey("ApplicationUserId");
+
+                    b.HasOne("BrainBurst.Domain.Entities.User", "Creator")
                         .WithMany("Tests")
                         .HasForeignKey("CreatorId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -452,13 +521,17 @@ namespace BrainBurst.Infrastructure.Migrations
 
             modelBuilder.Entity("BrainBurst.Domain.Entities.TestResult", b =>
                 {
+                    b.HasOne("BrainBurst.Domain.Entities.ApplicationUser", null)
+                        .WithMany("TestResults")
+                        .HasForeignKey("ApplicationUserId");
+
                     b.HasOne("BrainBurst.Domain.Entities.Test", "Test")
                         .WithMany("TestResults")
                         .HasForeignKey("TestId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("BrainBurst.Domain.Entities.ApplicationUser", "User")
+                    b.HasOne("BrainBurst.Domain.Entities.User", "User")
                         .WithMany("TestResults")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -559,6 +632,17 @@ namespace BrainBurst.Infrastructure.Migrations
             modelBuilder.Entity("BrainBurst.Domain.Entities.TestResult", b =>
                 {
                     b.Navigation("QuestionResults");
+                });
+
+            modelBuilder.Entity("BrainBurst.Domain.Entities.User", b =>
+                {
+                    b.Navigation("Flashcards");
+
+                    b.Navigation("Tags");
+
+                    b.Navigation("TestResults");
+
+                    b.Navigation("Tests");
                 });
 #pragma warning restore 612, 618
         }

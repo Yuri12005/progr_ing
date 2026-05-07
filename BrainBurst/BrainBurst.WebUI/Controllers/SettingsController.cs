@@ -1,51 +1,99 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
+using BrainBurst.Domain.Entities;
+using System.Threading.Tasks;
 
 namespace BrainBurst.WebUI.Controllers
 {
+    [Authorize] // Налаштування доступні тільки залогіненим
     public class SettingsController : Controller
     {
-        // Відкриває головну сторінку налаштувань
-        public IActionResult Index()
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+
+        public SettingsController(UserManager<ApplicationUser> userManager, SignInManager<ApplicationUser> signInManager)
         {
-            ViewBag.Username = "Твій_Нікнейм";
+            _userManager = userManager;
+            _signInManager = signInManager;
+        }
+
+        // Головна сторінка налаштувань
+        public async Task<IActionResult> Index()
+        {
+            var user = await _userManager.GetUserAsync(User);
+            ViewBag.Username = string.IsNullOrEmpty(user?.FullName) ? user?.UserName : user?.FullName;
             return View();
         }
 
-        // НОВЕ: Відкриває сторінку зміни пароля
+        // Сторінка зміни пароля
         [HttpGet]
         public IActionResult ChangePassword()
         {
             return View();
         }
 
-        // НОВЕ: Приймає дані після натискання "Зберегти"
         [HttpPost]
-        public IActionResult ChangePassword(string oldPassword, string newPassword, string confirmPassword)
+        public async Task<IActionResult> ChangePassword(string oldPassword, string newPassword, string confirmPassword)
         {
-            // ПІЗНІШЕ: тут буде логіка перевірки старого пароля 
-            // та збереження нового в базу даних
+            if (newPassword != confirmPassword)
+            {
+                ModelState.AddModelError("", "Паролі не збігаються.");
+                return View();
+            }
 
-            // Повертаємо користувача назад в налаштування
-            return RedirectToAction("Index");
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
+
+            // Використовуємо вбудований метод Identity для зміни пароля
+            var result = await _userManager.ChangePasswordAsync(user, oldPassword, newPassword);
+
+            if (result.Succeeded)
+            {
+                // Оновлюємо кукі, щоб сесія не перервалася після зміни пароля
+                await _signInManager.RefreshSignInAsync(user);
+                return RedirectToAction("Index", new { message = "Пароль успішно змінено" });
+            }
+
+            foreach (var error in result.Errors)
+            {
+                ModelState.AddModelError("", error.Description);
+            }
+
+            return View();
         }
 
-        // НОВЕ: Відкриває сторінку попередження про видалення
+        // Видалення акаунта
         [HttpGet]
         public IActionResult DeleteAccount()
         {
             return View();
         }
 
-        // НОВЕ: Приймає запит на видалення після вводу пароля
         [HttpPost]
-        public IActionResult DeleteAccount(string password)
+        public async Task<IActionResult> DeleteAccount(string password)
         {
-            // ПІЗНІШЕ ТУТ БУДЕ ЛОГІКА:
-            // 1. Перевіряємо, чи введений пароль правильний.
-            // 2. Якщо так — видаляємо користувача та всі його картки/тести з БД.
+            var user = await _userManager.GetUserAsync(User);
+            if (user == null) return RedirectToAction("Login", "Account");
 
-            // Після успішного видалення перекидаємо на сторінку реєстрації/входу
-            return RedirectToAction("Register", "Account");
+            // Перевіряємо, чи пароль вірний перед видаленням
+            var passwordValid = await _userManager.CheckPasswordAsync(user, password);
+            if (!passwordValid)
+            {
+                ModelState.AddModelError("", "Неправильний пароль. Видалення неможливе.");
+                return View();
+            }
+
+            // Видаляємо користувача (завдяки Cascade Delete в БД, його картки та тести видаляться автоматично)
+            var result = await _userManager.DeleteAsync(user);
+            if (result.Succeeded)
+            {
+                await _signInManager.SignOutAsync();
+                return RedirectToAction("Register", "Account");
+            }
+
+            ModelState.AddModelError("", "Помилка при видаленні акаунта.");
+            return View();
         }
     }
 }

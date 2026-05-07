@@ -4,10 +4,9 @@ namespace BrainBurst.Application.Interfaces.Repositories;
 
 public interface IUserRepository
 {
-    Task DeleteAsync(int id, CancellationToken ct);
-    Task<User> GetByIdAsync(int id, CancellationToken ct);
-    Task<User?> GetByEmailAsync(string email, CancellationToken ct);
-    Task<User> AddAsync(User user, CancellationToken ct);
-    Task UpdateAsync(User user, CancellationToken ct);
-    Task<IReadOnlyList<User>> GetTopAsync(int take, CancellationToken ct);
+    Task<ApplicationUser> AddAsync(ApplicationUser user, CancellationToken ct);
+    Task<ApplicationUser?> GetByIdAsync(int id, CancellationToken ct);
+    Task<ApplicationUser?> GetByEmailAsync(string email, CancellationToken ct);
+    Task<IReadOnlyList<ApplicationUser>> GetAllAsync(CancellationToken ct);
+    Task UpdateAsync(ApplicationUser user, CancellationToken ct);
 }

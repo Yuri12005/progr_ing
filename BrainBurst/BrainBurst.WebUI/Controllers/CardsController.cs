@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using BrainBurst.Application.Interfaces.Services;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
 using System;
+using System.Security.Claims; // Обов'язково для роботи з Claims (кукісами)
 
 namespace BrainBurst.WebUI.Controllers
 {
@@ -23,6 +25,7 @@ namespace BrainBurst.WebUI.Controllers
         public string Answer { get; set; }
     }
 
+    [Authorize] // Захищаємо контролер від неавторизованих користувачів
     public class CardsController : Controller
     {
         private readonly IFlashcardService _flashcardService;
@@ -32,6 +35,13 @@ namespace BrainBurst.WebUI.Controllers
         {
             _flashcardService = flashcardService;
             _tagService = tagService;
+        }
+
+        // Допоміжний метод для зручного отримання ID поточного користувача
+        private int GetCurrentUserId()
+        {
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.Parse(userIdString!);
         }
 
         public async Task<IActionResult> Index()
@@ -63,7 +73,8 @@ namespace BrainBurst.WebUI.Controllers
                 return RedirectToAction("Index");
             }
 
-            int creatorId = 1; // Заглушка, поки немає авторизації
+            // БЕРЕМО РЕАЛЬНИЙ ID ЗАМІСТЬ ЗАГЛУШКИ
+            int creatorId = GetCurrentUserId(); 
             var tags = new List<string> { topic };
 
             await _flashcardService.CreateAsync(creatorId, question, answer, tags, CancellationToken.None);
@@ -86,10 +97,12 @@ namespace BrainBurst.WebUI.Controllers
 
             return View(flashcards);
         }
+
         [HttpPost]
         public async Task<IActionResult> DeleteCard(int cardId, int deckId)
         {
-            int requesterId = 1; // Заглушка юзера
+            // БЕРЕМО РЕАЛЬНИЙ ID ЗАМІСТЬ ЗАГЛУШКИ
+            int requesterId = GetCurrentUserId(); 
 
             // Викликаємо метод видалення, який ми протестували
             await _flashcardService.DeleteAsync(cardId, requesterId, CancellationToken.None);

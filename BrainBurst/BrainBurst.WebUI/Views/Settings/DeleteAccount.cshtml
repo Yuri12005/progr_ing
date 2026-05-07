@@ -21,7 +21,6 @@
         text-align: center;
     }
 
-    /* Блок з попередженням */
     .warning-box {
         background-color: #FFF5F4;
         border: 2px solid #FF3B30;
@@ -58,7 +57,7 @@
         font-weight: 800;
         font-size: 18px;
         margin-left: 5px;
-        color: black; /* Чорний замість червоного, бо червоного тут і так багато */
+        color: black;
     }
 
     .input-field {
@@ -82,7 +81,6 @@
         margin-top: 10px;
     }
 
-    /* Кнопка видалення (червона) */
     .btn-danger {
         background-color: #FF3B30;
         color: white;
@@ -96,11 +94,10 @@
         transition: opacity 0.2s;
     }
 
-        .btn-danger:hover {
-            opacity: 0.8;
-        }
+    .btn-danger:hover {
+        opacity: 0.8;
+    }
 
-    /* Кнопка скасування */
     .btn-cancel {
         background-color: transparent;
         color: black;
@@ -115,19 +112,37 @@
         transition: background-color 0.2s;
     }
 
-        .btn-cancel:hover {
-            background-color: #EFEFEF;
-        }
+    .btn-cancel:hover {
+        background-color: #EFEFEF;
+    }
+
+    .alert-danger {
+        border-radius: 12px;
+        max-width: 500px;
+        width: 100%;
+        margin-bottom: 20px;
+        padding: 15px;
+    }
 </style>
 
 <div class="form-wrapper">
     <h1 class="page-title">Видалити акаунт?</h1>
 
+    @* Вивід помилок (наприклад, невірний пароль) *@
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger">
+            <div asp-validation-summary="All" class="text-danger"></div>
+        </div>
+    }
+
     <div class="warning-box">
         <p class="warning-text">Увага! Цю дію неможливо скасувати. Усі ваші флешкартки, створені тести, рейтинг та історія архіву будуть назавжди видалені.</p>
     </div>
 
-    <form class="delete-form" action="/Settings/DeleteAccount" method="post">
+    @* Форма з токеном захисту *@
+    <form class="delete-form" asp-controller="Settings" asp-action="DeleteAccount" method="post">
+        @Html.AntiForgeryToken()
 
         <div class="form-group">
             <div class="form-label">Введіть пароль для підтвердження</div>
@@ -136,8 +151,7 @@
 
         <div class="button-group">
             <button type="submit" class="btn-danger">Назавжди видалити акаунт</button>
-            <a href="/Settings" class="btn-cancel">Скасувати</a>
+            <a asp-controller="Settings" asp-action="Index" class="btn-cancel">Скасувати</a>
         </div>
-
     </form>
-</div>  
+</div>

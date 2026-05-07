@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +8,9 @@ using System.Threading;
 using Microsoft.EntityFrameworkCore;
 using BrainBurst.Infrastructure.Persistence;
 using BrainBurst.Domain.Entities;
-using BrainBurst.Application.Interfaces.Services; // Підключили сервіси
+using BrainBurst.Application.Interfaces.Services;
 using System.IO;
+using System.Security.Claims; // Для роботи з кукісами та ID
 
 namespace BrainBurst.WebUI.Controllers
 {
@@ -41,32 +43,43 @@ namespace BrainBurst.WebUI.Controllers
         public string UserInput { get; set; }
     }
 
+    [Authorize] // Закриваємо контролер від гостей
     public class TestsController : Controller
     {
         private readonly ApplicationDbContext _context;
-        private readonly ITestService _testService; // ДОДАЛИ СЕРВІС
+        private readonly ITestService _testService;
 
-        // Оновлений конструктор приймає і контекст, і сервіс
         public TestsController(ApplicationDbContext context, ITestService testService)
         {
             _context = context;
             _testService = testService;
         }
 
-        public IActionResult Index()
+        // Допоміжний метод для отримання реального ID
+        private int GetCurrentUserId()
         {
-            var tests = _context.Tests
-                .Select(t => new TestViewModel
-                {
-                    Id = t.TestId,
-                    Title = t.Title,
-                    QuestionCount = 0,
-                    IsRecent = false
-                })
-                .ToList();
-
-            return View(tests);
+            var userIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return int.Parse(userIdString!);
         }
+
+public IActionResult Index()
+{
+    int currentUserId = GetCurrentUserId();
+
+    var tests = _context.Tests
+        .Where(t => t.CreatorId == currentUserId)
+        .Select(t => new TestViewModel
+        {
+            Id = t.TestId,
+            Title = t.Title,
+            // ТЕПЕР РАХУЄМО РЕАЛЬНУ КІЛЬКІСТЬ КАРТОЧК У ПРИВ'ЯЗАНІЙ КОЛОДІ:
+            QuestionCount = t.Tag != null ? t.Tag.Flashcards.Count : 0,
+            IsRecent = false
+        })
+        .ToList();
+
+    return View(tests);
+}
 
         public IActionResult Take(int id)
         {
@@ -97,8 +110,11 @@ namespace BrainBurst.WebUI.Controllers
         [HttpGet]
         public IActionResult Create()
         {
+            int currentUserId = GetCurrentUserId();
+
             var availableDecks = _context.Tags
                 .Include(t => t.Flashcards)
+                .Where(t => t.CreatorId == currentUserId) // Тільки колоди поточного юзера
                 .Select(t => new TestViewModel
                 {
                     Id = t.TagId,
@@ -115,8 +131,7 @@ namespace BrainBurst.WebUI.Controllers
         {
             if (string.IsNullOrEmpty(testName)) return RedirectToAction("Index");
 
-            var currentUser = _context.Users.FirstOrDefault();
-            int creatorId = currentUser != null ? currentUser.UserId : 1;
+            int creatorId = GetCurrentUserId(); // Беремо реальний ID
             int? finalTagId = null;
 
             if (generationType == "deck" && selectedDeckId.HasValue)
@@ -131,7 +146,13 @@ namespace BrainBurst.WebUI.Controllers
                     fileContent = stream.ReadToEnd();
                 }
 
-                var aiTag = new Tag { Name = testName + " (AI згенеровано)" };
+                // Прив'язуємо AI колоду до реального користувача!
+                var aiTag = new Tag 
+                { 
+                    Name = testName + " (AI згенеровано)", 
+                    CreatorId = creatorId 
+                };
+                
                 _context.Tags.Add(aiTag);
                 _context.SaveChanges();
 
@@ -155,32 +176,61 @@ namespace BrainBurst.WebUI.Controllers
             return RedirectToAction("Index");
         }
 
-        // ОСЬ ВІН! Метод, який тепер використовує правильний ITestService
         [HttpPost]
-        public async Task<IActionResult> SubmitResult([FromBody] TestSubmissionData data)
+[HttpPost]
+public async Task<IActionResult> SubmitResult([FromBody] TestSubmissionData data)
+{
+    int userId = GetCurrentUserId(); // Беремо реальний ID
+
+    var answersForService = new List<(int flashcardId, string? userInput)>();
+    int correctAnswersCount = 0; // Лічильник правильних відповідей
+
+    if (data.Answers != null)
+    {
+        foreach (var ans in data.Answers)
         {
-            var currentUser = _context.Users.FirstOrDefault();
-            int userId = currentUser != null ? currentUser.UserId : 1;
-
-            // Перетворюємо твої відповіді у формат (int, string), який вимагає напарник
-            var answersForService = new List<(int flashcardId, string? userInput)>();
-            if (data.Answers != null)
+            answersForService.Add((ans.FlashcardId, ans.UserInput));
+            if (ans.IsCorrect)
             {
-                foreach (var ans in data.Answers)
-                {
-                    answersForService.Add((ans.FlashcardId, ans.UserInput));
-                }
+                correctAnswersCount++;
             }
-
-            // Викликаємо сервіс!
-            var resultDto = await _testService.SubmitAsync(
-                data.TestId,
-                userId,
-                answersForService,
-                CancellationToken.None
-            );
-
-            return Json(new { success = true, score = resultDto.CorrectAnswersPercent });
         }
+    }
+
+    // 1. Зберігаємо результат тесту через сервіс
+    var resultDto = await _testService.SubmitAsync(
+        data.TestId,
+        userId,
+        answersForService,
+        CancellationToken.None
+    );
+
+    // 2. НАРАХОВУЄМО БАЛИ КОРИСТУВАЧУ
+    var user = await _context.Users.FindAsync(userId);
+    if (user != null)
+    {
+        int earnedPoints = correctAnswersCount * 10; // 10 балів за кожну правильну відповідь
+        user.Points += earnedPoints;
+
+        // 3. АВТОМАТИЧНО ОНОВЛЮЄМО РАНГ
+        if (user.Points >= 1000)
+        {
+            user.Rank = "Професіонал";
+        }
+        else if (user.Points >= 300)
+        {
+            user.Rank = "Досвідчений";
+        }
+        else
+        {
+            user.Rank = "Початківець";
+        }
+
+        // Зберігаємо зміни юзера в базу даних
+        await _context.SaveChangesAsync();
+    }
+
+    return Json(new { success = true, score = resultDto.CorrectAnswersPercent, earned = correctAnswersCount * 10 });
+}
     }
 }
