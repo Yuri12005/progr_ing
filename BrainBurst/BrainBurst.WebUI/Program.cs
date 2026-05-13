@@ -12,7 +12,7 @@ namespace BrainBurst.WebUI
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             // === 1. НАЛАШТУВАННЯ SERILOG ===
             var config = new ConfigurationBuilder()
@@ -51,6 +51,8 @@ namespace BrainBurst.WebUI
                     options.Password.RequireNonAlphanumeric = false;
                     options.Password.RequireUppercase = false;
                     options.Password.RequireLowercase = false;
+
+                    options.SignIn.RequireConfirmedEmail = true;
                 })
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
@@ -80,6 +82,21 @@ namespace BrainBurst.WebUI
 
 
                 var app = builder.Build();
+
+                using (var scope = app.Services.CreateScope())
+                {
+                    var services = scope.ServiceProvider;
+                    try
+                    {
+                        // Викликаємо наш новий Seeder
+                        await BrainBurst.WebUI.Data.DbSeeder.SeedRolesAndAdminAsync(services);
+                        Log.Information("Data seeding completed successfully.");
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Error(ex, "An error occurred while seeding the database.");
+                    }
+                }
 
                 // === 3. НАЛАШТУВАННЯ HTTP PIPELINE ===
                 if (!app.Environment.IsDevelopment())

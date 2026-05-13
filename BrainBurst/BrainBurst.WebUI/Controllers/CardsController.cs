@@ -46,7 +46,11 @@ namespace BrainBurst.WebUI.Controllers
 
         public async Task<IActionResult> Index()
         {
-            var tags = await _tagService.GetDecksAsync(CancellationToken.None);
+            // 1. Отримуємо ID реального юзера
+            int currentUserId = GetCurrentUserId();
+
+            // 2. Відправляємо цей ID у сервіс
+            var tags = await _tagService.GetDecksAsync(currentUserId, CancellationToken.None);
 
             var decks = tags.Select(t => new DeckViewModel
             {

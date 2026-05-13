@@ -36,27 +36,33 @@ public class AccountController : Controller
     {
         if (ModelState.IsValid)
         {
-            var user = new ApplicationUser 
-            { 
-                UserName = model.Email, 
+            var user = new ApplicationUser
+            {
+                UserName = model.Email,
                 Email = model.Email,
                 FullName = model.FullName,
                 CreatedAt = DateTime.UtcNow,
                 Points = 0,
                 Rank = "Beginner"
             };
-            
+
             var result = await _userManager.CreateAsync(user, model.Password);
 
             if (result.Succeeded)
             {
-                // Присвоюємо базову роль
                 await EnsureRoleExists("User");
                 await _userManager.AddToRoleAsync(user, "User");
 
-                // Одразу логінимо після успішної реєстрації
-                await _signInManager.SignInAsync(user, isPersistent: false);
-                return RedirectToAction("Index", "Home");
+                var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var callbackUrl = Url.Action(
+                    "ConfirmEmail",
+                    "Account",
+                    new { userId = user.Id, code = code },
+                    protocol: HttpContext.Request.Scheme);
+
+                System.Diagnostics.Debug.WriteLine($"\n\n=== LINK FOR EMAIL CONFIRMATION ===\n{callbackUrl}\n====================================\n\n");
+
+                return RedirectToAction("Login", "Account");
             }
 
             foreach (var error in result.Errors)
@@ -65,6 +71,30 @@ public class AccountController : Controller
             }
         }
         return View(model);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> ConfirmEmail(string userId, string code)
+    {
+        if (userId == null || code == null)
+        {
+            return RedirectToAction("Index", "Home");
+        }
+
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null)
+        {
+            return NotFound();
+        }
+
+        var result = await _userManager.ConfirmEmailAsync(user, code);
+        if (result.Succeeded)
+        {
+            await _signInManager.SignInAsync(user, isPersistent: false);
+            return RedirectToAction("Index", "Home");
+        }
+
+        return View("Error");
     }
 
     [HttpGet]
@@ -114,5 +144,67 @@ public class AccountController : Controller
         {
             await _roleManager.CreateAsync(new IdentityRole<int> { Name = roleName });
         }
+    }
+
+    // --- ВІДНОВЛЕННЯ ПАРОЛЯ ---
+
+    [HttpGet]
+    public IActionResult ForgotPassword() => View();
+
+    [HttpPost]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+    {
+        if (ModelState.IsValid)
+        {
+            var user = await _userManager.FindByEmailAsync(model.Email);
+            // Якщо юзер знайдений і його пошта підтверджена
+            if (user != null && await _userManager.IsEmailConfirmedAsync(user))
+            {
+                var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+                var callbackUrl = Url.Action("ResetPassword", "Account",
+                    new { email = user.Email, code = code }, protocol: HttpContext.Request.Scheme);
+
+                // ВИВОДИМО У КОНСОЛЬ VISUAL STUDIO
+                System.Diagnostics.Debug.WriteLine($"\n\n=== LINK FOR PASSWORD RESET ===\n{callbackUrl}\n===============================\n\n");
+            }
+
+            // Ми не кажемо юзеру, чи знайшли email, щоб зловмисники не могли підбирати пошти
+            TempData["StatusMessage"] = "Якщо ваш email є в базі, ми згенерували посилання для відновлення (шукай у консолі).";
+            return RedirectToAction("Login");
+        }
+        return View(model);
+    }
+
+    [HttpGet]
+    public IActionResult ResetPassword(string code = null, string email = null)
+    {
+        if (code == null || email == null) return BadRequest("Некоректне посилання для відновлення.");
+        return View(new ResetPasswordViewModel { Code = code, Email = email });
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> ResetPassword(ResetPasswordViewModel model)
+    {
+        if (!ModelState.IsValid) return View(model);
+
+        var user = await _userManager.FindByEmailAsync(model.Email);
+        if (user == null)
+        {
+            TempData["StatusMessage"] = "Пароль успішно змінено!";
+            return RedirectToAction("Login");
+        }
+
+        var result = await _userManager.ResetPasswordAsync(user, model.Code, model.Password);
+        if (result.Succeeded)
+        {
+            TempData["StatusMessage"] = "Пароль успішно змінено! Тепер ви можете увійти.";
+            return RedirectToAction("Login");
+        }
+
+        foreach (var error in result.Errors)
+        {
+            ModelState.AddModelError(string.Empty, error.Description);
+        }
+        return View(model);
     }
 }

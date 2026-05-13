@@ -10,9 +10,11 @@ public class TagService : ITagService
 
     public TagService(ITagRepository tagRepository) => _tagRepository = tagRepository;
 
-    public async Task<IReadOnlyList<TagDTO>> GetDecksAsync(CancellationToken ct)
+    public async Task<IReadOnlyList<TagDTO>> GetDecksAsync(int userId, CancellationToken ct)
     {
-        var tags = await _tagRepository.GetAllWithCardsAsync(ct);
+        // Передаємо userId у репозиторій
+        var tags = await _tagRepository.GetAllWithCardsAsync(userId, ct);
+
         return tags.Select(t => new TagDTO
         {
             TagId = t.TagId,

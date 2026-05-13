@@ -1,6 +1,7 @@
 ﻿using BrainBurst.Application.DTOs;
 using BrainBurst.Application.Interfaces.Repositories;
 using BrainBurst.Application.Interfaces.Services;
+using BrainBurst.Domain.Entities;
 
 namespace BrainBurst.Application.Services;
 
@@ -27,10 +28,10 @@ public class ArchiveService : IArchiveService
         }).ToList();
     }
 
-    public async Task<ArchiveDetailsDTO?> GetArchiveDetailsAsync(int testResultId, CancellationToken ct)
+    public async Task<ArchiveDetailsDTO?> GetArchiveDetailsAsync(int userId, int testResultId, CancellationToken ct)
     {
         // Оскільки в репозиторії немає GetById, ми використовуємо GetByUserAsync (тимчасове рішення, ID=1)
-        var allResults = await _testResultRepository.GetByUserAsync(1, ct);
+        var allResults = await _testResultRepository.GetByUserAsync(userId, ct);
         var result = allResults.FirstOrDefault(r => r.TestResultId == testResultId);
 
         if (result == null) return null;

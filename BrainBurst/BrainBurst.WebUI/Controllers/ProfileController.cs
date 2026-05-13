@@ -106,9 +106,14 @@ namespace BrainBurst.WebUI.Controllers
         }
 
         // РЕАЛЬНІ ДЕТАЛІ ТЕСТУ
+        // РЕАЛЬНІ ДЕТАЛІ ТЕСТУ
         public async Task<IActionResult> ArchiveDetails(int id)
         {
-            var detailsDto = await _archiveService.GetArchiveDetailsAsync(id, CancellationToken.None);
+            // 1. Дістаємо ID поточного користувача
+            int userId = GetCurrentUserId();
+
+            // 2. Передаємо userId у сервіс разом з id тесту
+            var detailsDto = await _archiveService.GetArchiveDetailsAsync(userId, id, CancellationToken.None);
 
             if (detailsDto == null) return NotFound();
 
