@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using BrainBurst.Infrastructure.ExternalServices;
 using BrainBurst.Infrastructure.Persistence;
 using Serilog;
 using BrainBurst.Application.Interfaces.Repositories;
@@ -79,6 +80,8 @@ namespace BrainBurst.WebUI
                 builder.Services.AddScoped<ITestService, TestService>();
                 builder.Services.AddScoped<ITagService, TagService>();
                 builder.Services.AddScoped<IArchiveService, ArchiveService>();
+
+                builder.Services.AddHttpClient<ITestGenerationService, OpenAiTestGenerationService>();
 
 
                 var app = builder.Build();

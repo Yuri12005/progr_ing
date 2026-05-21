@@ -118,10 +118,13 @@
 
 <h1 class="page-title">Мої картки</h1>
 
-<div class="search-container">
-    <input type="text" class="search-input" placeholder="">
-    <div class="search-icon">🔍</div>
-</div>
+<form method="get" action="/Cards/Index">
+    <div class="search-container">
+        <input type="text" name="searchQuery" value="@ViewData["SearchQuery"]" class="search-input" placeholder="Пошук колод...">
+
+        <button type="submit" class="search-icon" style="background: none; border: none; cursor: pointer; padding: 0;">🔍</button>
+    </div>
+</form>
 
 <h2 class="section-title">Продовжити вивчення</h2>
 <div class="cards-grid">

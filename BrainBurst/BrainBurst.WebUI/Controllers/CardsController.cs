@@ -44,7 +44,7 @@ namespace BrainBurst.WebUI.Controllers
             return int.Parse(userIdString!);
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(string searchQuery)
         {
             // 1. Отримуємо ID реального юзера
             int currentUserId = GetCurrentUserId();
@@ -59,6 +59,15 @@ namespace BrainBurst.WebUI.Controllers
                 CreatedDate = t.LastCardCreatedAt?.ToString("dd/MM/yyyy") ?? DateTime.UtcNow.ToString("dd/MM/yyyy"),
                 IsRecent = t.LastCardCreatedAt.HasValue && t.LastCardCreatedAt.Value > DateTime.UtcNow.AddDays(-3)
             }).ToList();
+
+            // 3. ЛОГІКА ПОШУКУ: якщо введено текст, фільтруємо за назвою
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                decks = decks.Where(d => d.Title.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)).ToList();
+
+                // Зберігаємо запит, щоб він залишився в полі вводу після перезавантаження сторінки
+                ViewData["SearchQuery"] = searchQuery;
+            }
 
             return View(decks);
         }

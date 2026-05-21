@@ -48,11 +48,13 @@ namespace BrainBurst.WebUI.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly ITestService _testService;
+        private readonly ITestGenerationService _testGenerationService;
 
-        public TestsController(ApplicationDbContext context, ITestService testService)
+        public TestsController(ApplicationDbContext context, ITestService testService, ITestGenerationService testGenerationService)
         {
             _context = context;
             _testService = testService;
+            _testGenerationService = testGenerationService; // Ініціалізація
         }
 
         // Допоміжний метод для отримання реального ID
@@ -62,24 +64,36 @@ namespace BrainBurst.WebUI.Controllers
             return int.Parse(userIdString!);
         }
 
-public IActionResult Index()
-{
-    int currentUserId = GetCurrentUserId();
-
-    var tests = _context.Tests
-        .Where(t => t.CreatorId == currentUserId)
-        .Select(t => new TestViewModel
+        public IActionResult Index(string searchQuery)
         {
-            Id = t.TestId,
-            Title = t.Title,
-            // ТЕПЕР РАХУЄМО РЕАЛЬНУ КІЛЬКІСТЬ КАРТОЧК У ПРИВ'ЯЗАНІЙ КОЛОДІ:
-            QuestionCount = t.Tag != null ? t.Tag.Flashcards.Count : 0,
-            IsRecent = false
-        })
-        .ToList();
+            int currentUserId = GetCurrentUserId();
 
-    return View(tests);
-}
+            // 1. Створюємо базовий запит (беремо тільки тести цього користувача)
+            var query = _context.Tests.Where(t => t.CreatorId == currentUserId);
+
+            // 2. ЛОГІКА ПОШУКУ: якщо є текст, фільтруємо базу даних
+            if (!string.IsNullOrEmpty(searchQuery))
+            {
+                // Використовуємо ToLower(), щоб пошук не залежав від великих/малих літер
+                query = query.Where(t => t.Title.ToLower().Contains(searchQuery.ToLower()));
+
+                // Зберігаємо запит для відображення в інпуті
+                ViewData["SearchQuery"] = searchQuery;
+            }
+
+            // 3. Виконуємо запит і формуємо список для View
+            var tests = query
+                .Select(t => new TestViewModel
+                {
+                    Id = t.TestId,
+                    Title = t.Title,
+                    QuestionCount = t.Tag != null ? t.Tag.Flashcards.Count : 0,
+                    IsRecent = false
+                })
+                .ToList();
+
+            return View(tests);
+        }
 
         public IActionResult Take(int id)
         {
@@ -127,11 +141,11 @@ public IActionResult Index()
         }
 
         [HttpPost]
-        public IActionResult Create(string testName, string generationType, int? selectedDeckId, IFormFile? uploadedFile)
+        public async Task<IActionResult> Create(string testName, string generationType, int? selectedDeckId, IFormFile? uploadedFile)
         {
             if (string.IsNullOrEmpty(testName)) return RedirectToAction("Index");
 
-            int creatorId = GetCurrentUserId(); // Беремо реальний ID
+            int creatorId = GetCurrentUserId();
             int? finalTagId = null;
 
             if (generationType == "deck" && selectedDeckId.HasValue)
@@ -143,26 +157,65 @@ public IActionResult Index()
                 string fileContent;
                 using (var stream = new StreamReader(uploadedFile.OpenReadStream()))
                 {
-                    fileContent = stream.ReadToEnd();
+                    fileContent = await stream.ReadToEndAsync();
                 }
 
-                // Прив'язуємо AI колоду до реального користувача!
-                var aiTag = new Tag 
-                { 
-                    Name = testName + " (AI згенеровано)", 
-                    CreatorId = creatorId 
-                };
-                
-                _context.Tags.Add(aiTag);
-                _context.SaveChanges();
+                try
+                {
+                    // 1. СПОЧАТКУ звертаємося до ШІ (ще нічого не зберігаємо в базу!)
+                    var generatedCardsDto = await _testGenerationService.CreateFlashcardsFromTextAsync(
+                        creatorId,
+                        fileContent,
+                        new List<string>(),
+                        CancellationToken.None);
 
-                finalTagId = aiTag.TagId;
+                    // 2. Якщо ШІ повернув порожній результат - перериваємо створення
+                    if (generatedCardsDto == null || !generatedCardsDto.Any())
+                    {
+                        // Можеш вивести це повідомлення через TempData у своїй View, якщо хочеш
+                        TempData["Error"] = "ШІ не зміг згенерувати картки з цього тексту.";
+                        return RedirectToAction("Create");
+                    }
+
+                    // 3. ТІЛЬКИ ТЕПЕР, коли маємо картки, створюємо колоду
+                    var aiTag = new Tag
+                    {
+                        Name = testName + " (AI згенеровано)",
+                        CreatorId = creatorId
+                    };
+                    _context.Tags.Add(aiTag);
+
+                    // 4. Додаємо картки
+                    foreach (var dto in generatedCardsDto)
+                    {
+                        var newCard = new Flashcard
+                        {
+                            Question = dto.Question,
+                            Answer = dto.Answer,
+                            CreatorId = creatorId
+                        };
+                        newCard.Tags.Add(aiTag);
+                        _context.Flashcards.Add(newCard);
+                    }
+
+                    // Зберігаємо колоду і картки одним махом
+                    await _context.SaveChangesAsync();
+                    finalTagId = aiTag.TagId;
+                }
+                catch (Exception ex)
+                {
+                    // Якщо ШІ впав (ASCII помилка, немає грошей і т.д.)
+                    Serilog.Log.Error(ex, "КРИТИЧНА ПОМИЛКА ШІ ПРИ ГЕНЕРАЦІЇ");
+                    // Повертаємо назад на форму, НІЧОГО не зберігши в базу!
+                    return RedirectToAction("Create");
+                }
             }
             else
             {
                 return RedirectToAction("Index");
             }
 
+            // ЦЕЙ КОД ВИКОНАЄТЬСЯ ТІЛЬКИ ЯКЩО ВСЕ ПРОЙШЛО УСПІШНО АБО ЯКЩО ОБРАНО ГОТОВУ КОЛОДУ
             var newTest = new Test
             {
                 Title = testName,
@@ -171,12 +224,11 @@ public IActionResult Index()
             };
 
             _context.Tests.Add(newTest);
-            _context.SaveChanges();
+            await _context.SaveChangesAsync();
 
             return RedirectToAction("Index");
         }
 
-        [HttpPost]
 [HttpPost]
 public async Task<IActionResult> SubmitResult([FromBody] TestSubmissionData data)
 {
